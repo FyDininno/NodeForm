@@ -2,7 +2,7 @@ import os
 import importlib.util
 import bpy
 from bpy.types import Node, GeometryNodeTree, Operator, Menu
-from bpy.props import StringProperty, FloatProperty
+from bpy.props import StringProperty, BoolProperty, EnumProperty
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -32,11 +32,23 @@ class NODE_FORM_NT_Start_Node(Node):
     bl_icon = 'PLAY'
 
     def init(self, context):
-        self.outputs.new('NodeSocketFloat', "Sequence Start")
+        self.outputs.new('NodeSocketColor', "")
 
     def draw_buttons(self, context, layout):
         layout.operator("node_form.start_button", text="Run All Paths")
         layout.menu('node_form.start_node_menu', text='Add Node')
+
+class NODE_FORM_NT_Merger_Node(Node):
+
+    bl_idname = 'node_form.merger_node'
+    bl_label = "Merger Node"
+
+    automation_type: StringProperty(default='MRG')
+
+    def init(self, context):
+        self.outputs.new('NodeSocketColor', "")
+        self.inputs.new('NodeSocketColor', "")
+        self.inputs.new('NodeSocketColor', "")
 
 class NODE_FORM_NT_Selector_Node(Node):
 
@@ -46,8 +58,8 @@ class NODE_FORM_NT_Selector_Node(Node):
     automation_type: StringProperty(default='SLT')
 
     def init(self, context):
-        self.outputs.new('NodeSocketFloat', "") 
-        self.inputs.new('NodeSocketFloat', "")
+        self.outputs.new('NodeSocketColor', "")
+        self.inputs.new('NodeSocketColor', "")
 
 class NODE_FORM_NT_Deleter_Node(Node):
 
@@ -57,8 +69,8 @@ class NODE_FORM_NT_Deleter_Node(Node):
     automation_type: StringProperty(default='DEL')
 
     def init(self, context):
-        self.outputs.new('NodeSocketFloat', "") 
-        self.inputs.new('NodeSocketFloat', "")
+        self.outputs.new('NodeSocketColor', "")
+        self.inputs.new('NodeSocketColor', "")
 
 class NODE_FORM_NT_Gridder_Node(Node):
 
@@ -66,26 +78,107 @@ class NODE_FORM_NT_Gridder_Node(Node):
     bl_label = "Gridder Node"
 
     automation_type: StringProperty(default='GRD')
-    x_offset = FloatProperty(default=0)
-    y_offset = FloatProperty(default=0)
-    z_offset = FloatProperty(default=0)
-    x_length = FloatProperty(default=1)
-    y_length = FloatProperty(default=1)
-    z_length = FloatProperty(default=1)
+
+    x_offset: StringProperty(default='0')
+    y_offset: StringProperty(default='0')
+    z_offset: StringProperty(default='0')
+    x_length: StringProperty(default='1')
+    y_length: StringProperty(default='1')
+    z_length: StringProperty(default='1')
+    cube_density: StringProperty(default='1')
+    is_hollow: BoolProperty(default=False)
 
     def init(self, context):
-        self.outputs.new('NodeSocketFloat', "") 
-        self.inputs.new('NodeSocketFloat', "")
+        self.outputs.new('NodeSocketColor', "")
+        self.inputs.new('NodeSocketColor', "")
 
     def draw_buttons(self, context, layout):
-        col = layout.column()
-        col.prop(self.x_offset)
-        col.prop(self.y_offset)
-        col.prop(self.z_offset)
-        col = layout.column()
-        col.prop(self.x_length)
-        col.prop(self.y_length)
-        col.prop(self.z_length)
+        row = layout.row()
+        row.label(text='Offsets {x,y,z}')
+        row.label(text='Lengths {x,y,z}')
+        row = layout.row()
+        row.prop(self, "x_offset", text='')
+        row.prop(self, "x_length", text='')
+        row = layout.row()
+        row.prop(self, "y_offset", text='')
+        row.prop(self, "y_length", text='')
+        row = layout.row()
+        row.prop(self, "z_offset", text='')
+        row.prop(self, "z_length", text='')
+        row = layout.row()
+        row.label(text='Cube Density')
+        row = layout.row()
+        row.prop(self, 'cube_density', text='')
+        row.prop(self, 'is_hollow', text='Hollow')
+
+class NODE_FORM_NT_Transformer_Node(Node):
+
+    bl_idname = 'node_form.transformer_node'
+    bl_label = "Transformer Node"
+
+    automation_type: StringProperty(default='TFM')
+
+    x_variable: StringProperty(default='α')
+    y_variable: StringProperty(default='β')
+    z_variable: StringProperty(default='γ')
+    x_equation: StringProperty(default='α = x')
+    y_equation: StringProperty(default='β = y')
+    z_equation: StringProperty(default='γ = z')
+    
+    animation_run_time: StringProperty(default='10')
+    frames_per_calculation: StringProperty(default='2')
+    repeats: StringProperty(default='0')
+
+    transformation_type: EnumProperty(
+            name="Tranformation Type",
+            description="Choose an option",
+            items=[
+                ('REGULAR', "Regular Transformation", "Spatial coordinates will be transformed immediately (use if time, 't', is in your function)"),
+                ('SMOOTH', "Smooth Tranformation", "Spatial coordinates will be smoothly interpolated (do not use for variables with negative exponents)"),
+                ('LINEAR', "Linear Transformation", "Spatial coordinates will be linearly interpolated")
+            ],
+            default='REGULAR'
+        )
+    
+    keep_option: EnumProperty(
+            name="Keep Option",
+            description="Choose an option",
+            items=[
+                ('HIDE', "Keep and Hide Original", "The original object will be kept but hidden"),
+                ('KEEP', "Keep Original", "The original object will be kept and visible"),
+                ('DELETE', "Delete Original", "The original object will be deleted")
+            ],
+            default='HIDE'
+        )
+    
+    def init(self, context):
+        self.outputs.new('NodeSocketColor', "")
+        self.inputs.new('NodeSocketColor', "")
+    
+    def draw_buttons(self, context, layout):
+        row = layout.row()
+        row.label(text='Variables {x,y,z}new')
+        row.label(text='Equations {x,y,z,t,T}')
+        row = layout.row()
+        row.prop(self, "x_variable", text='')
+        row.prop(self, "x_equation", text='')
+        row = layout.row()
+        row.prop(self, "y_variable", text='')
+        row.prop(self, "y_equation", text='')
+        row = layout.row()
+        row.prop(self, "z_variable", text='')
+        row.prop(self, "z_equation", text='')
+        row = layout.row()
+        row.label(text='Run Time')
+        row.label(text='Frame Density')
+        row.label(text='Repetitions')
+        row = layout.row()
+        row.prop(self, "animation_run_time", text='')
+        row.prop(self, "frames_per_calculation", text='')
+        row.prop(self, "repeats", text='')
+        row = layout.row()
+        row.prop(self, "keep_option", text='')
+        row.prop(self, "transformation_type", text='')
 
 class NODE_FORM_MT_Start_Node_Menu(Menu):
 
@@ -95,8 +188,11 @@ class NODE_FORM_MT_Start_Node_Menu(Menu):
     def draw(self, context):
         layout = self.layout
         layout.operator('node_form.create_selector_node', text="Create Selector Node")
+        layout.operator('node_form.create_merger_node', text="Create Merger Node")
         layout.operator('node_form.create_deleter_node', text="Create Deleter Node")
         layout.operator('node_form.create_gridder_node', text="Create Gridder Node")
+        layout.operator('node_form.create_transformer_node', text="Create Transformer Node")
+
 
 class NODE_FORM_OT_Start_Button(Operator):
     """Operator to find and display all downstream nodes from the selected node."""
@@ -142,6 +238,20 @@ class NODE_FORM_OT_Create_Selector_Node(Operator):
         else:
             return{'ERROR'}
 
+class NODE_FORM_OT_Create_Merger_Node(Operator):
+    
+    bl_label = "Create Merger Node"
+    bl_idname = "node_form.create_merger_node"
+
+    def execute(self, context):
+        node_tree = find_node_form_tree()
+        if node_tree:
+            start_node = node_tree.nodes.new('node_form.merger_node')
+            start_node.location = (100, 100)
+            return{'FINISHED'}
+        else:
+            return{'ERROR'}
+
 class NODE_FORM_OT_Create_Deleter_Node(Operator):
     
     bl_label = "Create Deleter Node"
@@ -170,6 +280,20 @@ class NODE_FORM_OT_Create_Gridder_Node(Operator):
         else:
             return{'ERROR'}
 
+class NODE_FORM_OT_Create_Transformer_Node(Operator):
+    
+    bl_label = "Create Transformer Node"
+    bl_idname = "node_form.create_transformer_node"
+
+    def execute(self, context):
+        node_tree = find_node_form_tree()
+        if node_tree:
+            start_node = node_tree.nodes.new('node_form.transformer_node')
+            start_node.location = (100, 100)
+            return{'FINISHED'}
+        else:
+            return{'ERROR'}
+        
 def find_node_form_tree():
 
     node_tree = None
@@ -181,10 +305,22 @@ def find_node_form_tree():
         self.report({'ERROR'}, "No Node Form Tree found")
         return None
     
-registrars = [NODE_FORM_GNT_Node_Form_Tree,
-              NODE_FORM_NT_Start_Node, NODE_FORM_NT_Selector_Node, NODE_FORM_NT_Deleter_Node,
-              NODE_FORM_MT_Start_Node_Menu,
-              NODE_FORM_OT_Start_Button, NODE_FORM_OT_Create_Selector_Node, NODE_FORM_OT_Create_Deleter_Node]
+registrars = [
+    NODE_FORM_GNT_Node_Form_Tree, 
+    NODE_FORM_NT_Start_Node, 
+    NODE_FORM_NT_Merger_Node,
+    NODE_FORM_NT_Selector_Node, 
+    NODE_FORM_NT_Deleter_Node, 
+    NODE_FORM_NT_Gridder_Node,
+    NODE_FORM_NT_Transformer_Node,
+    NODE_FORM_MT_Start_Node_Menu,
+    NODE_FORM_OT_Start_Button, 
+    NODE_FORM_OT_Create_Selector_Node, 
+    NODE_FORM_OT_Create_Merger_Node,
+    NODE_FORM_OT_Create_Deleter_Node, 
+    NODE_FORM_OT_Create_Gridder_Node,
+    NODE_FORM_OT_Create_Transformer_Node
+    ]
 
 def register_ng():
     for nodeclass in registrars:

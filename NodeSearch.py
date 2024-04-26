@@ -1,10 +1,11 @@
 import os
 import importlib.util
+import math
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Construct the path to the module you want to import
-module_name_1 = "SceneProcesses"  # Name of the module you want to import
+module_name_1 = "BpyOperations"  # Name of the module you want to import
 module_file_1 = module_name_1 + ".py"
 module_path_1 = os.path.join(current_dir, module_file_1)
 
@@ -55,12 +56,80 @@ def list_output_nodes(input_node):
     return output_nodes
 
 def execute_node(node):
+
     if hasattr(node, 'automation_type'):
+        
         match getattr(node, 'automation_type'):
+
+            case 'MRG':
+                pass
+
             case 'SLT':
                 sp.bpy_select_all()
+
             case 'DEL':
                 sp.bpy_delete_selected_objects()
+
+            case 'GRD':
+                evaluated_strings = evaluate_strings([
+                                        node.x_length,
+                                        node.y_length,
+                                        node.z_length,
+                                        node.x_offset,
+                                        node.y_offset,
+                                        node.z_offset,
+                                        node.cube_density,
+                                    ])
+                
+                lengths_vector = evaluated_strings[0:3]
+                offset_vector = evaluated_strings[3:6]
+                cube_density = evaluated_strings[6]
+                
+                sp.grid(lengths_vector, offset_vector, cube_density)
+                
+                if node.is_hollow:
+                    sp.hollow_grid(offset_vector, lengths_vector, cube_density)
+
+            case 'TFM':
+
+                variables= [
+                    node.x_variable,
+                    node.y_variable,
+                    node.z_variable,
+                    node.x_equation,
+                    node.y_equation,
+                    node.z_equation,
+                ]
+
+                evaluated_strings = evaluate_strings([
+                                        node.animation_run_time,
+                                        node.frames_per_calculation,
+                                        node.repeats,
+                                    ])
+                
+                variable_vector = variables[0:3]
+                equations_vector = variables[3:6]
+                animation_run_time = evaluated_strings[0]
+                frames_per_clculation = evaluated_strings[1]
+                repeats = evaluated_strings[2]
+                transformation_type = node.transformation_type
+                keep_option = node.keep_option
+
+                sp.transform(
+                    variable_vector,
+                    equations_vector,
+                    animation_run_time,
+                    frames_per_clculation,
+                    repeats,
+                    transformation_type,
+                    keep_option,
+                )
+
+def evaluate_strings(list):
+    return_list = []
+    for item in list:
+        return_list.append(eval(item, {'__builtins__': None, 'math': math}))
+    return return_list
 
 def execute_all_paths(start_node):
     def run_path(input_node):

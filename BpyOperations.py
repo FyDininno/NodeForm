@@ -3,7 +3,7 @@ import bmesh
 import mathutils
 import math
 
-def grid(axisVector, offsetVector, density):
+def grid(lengths_vector, offset_vector, density):
     # Store current selection
     current_selection = [obj for obj in bpy.context.selected_objects]
 
@@ -13,16 +13,15 @@ def grid(axisVector, offsetVector, density):
     bm = bmesh.new()
     bmesh.ops.create_cube(bm, size=1.0)
     bmesh.ops.translate(bm, verts=list(bm.verts), vec=math_return_vector(1 / 2, 1 / 2, 1 / 2))
-    math_flatten_bmesh(bm, axisVector)
-    xCuts, yCuts, zCuts = math.floor(density * axisVector[0]), math.floor(density * axisVector[1]), math.floor(
-        density * axisVector[2])
+    math_flatten_bmesh(bm, lengths_vector)
+    xCuts, yCuts, zCuts = math.floor(density * lengths_vector[0]), math.floor(density * lengths_vector[1]), math.floor(density * lengths_vector[2])
     xScale = abs(1 / xCuts if xCuts != 0 else 0)
     yScale = abs(1 / yCuts if yCuts != 0 else 0)
     zScale = abs(1 / zCuts if zCuts != 0 else 0)
     iterationsVector = mathutils.Vector((xCuts, yCuts, zCuts))
     scaleVector = mathutils.Vector((xScale, yScale, zScale))
     math_flatten_bmesh(bm, scaleVector)
-    math_translate_bmesh(bm, offsetVector)
+    math_translate_bmesh(bm, offset_vector)
     bm_now = bm
     created_objects = []  # New array to store created objects
     for d in range(3):
@@ -32,7 +31,7 @@ def grid(axisVector, offsetVector, density):
             obj = bmesh_embody_mesh(bm_temp)
             created_objects.append(obj)  # Add created object to the array
             translater = mathutils.Vector((0, 0, 0))
-            translater[d] = axisVector[d] * scaleVector[d]
+            translater[d] = lengths_vector[d] * scaleVector[d]
             math_translate_bmesh(bm_copy, translater)
             bm_now = bm_copy
         obj = bmesh_embody_mesh(bm_now)
@@ -55,24 +54,33 @@ def hollow_grid(dimension, offset, density):
     bm.free()
 
 # Add two more for loops, one for repeat iterations and the other one to apply the transform to each selected element
-def transform(localxvar, localyvar, localzvar, transformation, time_span, steps_per_frame, repetitions, fast_transformation, add_weighted_original, keepOg, hideOg):
-    
-    transformationX = (transformation[0]) #The expressionreplacement will now happen when the arguments are being passed in 
-    transformationY = (transformation[1])
-    transformationZ = (transformation[2])
+def transform(variables_vector, equations_vector, animation_run_time, frames_per_calculation, repeats, transformation_type, keep_option):
+    print('starting transformation')
+    transformationX = (equations_vector[0]) #The expressionreplacement will now happen when the arguments are being passed in 
+    transformationY = (equations_vector[1])
+    transformationZ = (equations_vector[2])
 
-    for _ in range(repetitions):
+    for _ in range(int(repeats)+1):
 
         for obj in bpy.context.selected_objects:
+            
+            startframe = 0.0
+            smoothing_constant = 0.0
+            is_instantaneous = True if animation_run_time > 0 else False
+            framesPerSecond = 24
+            frameDivisor = frames_per_calculation
+            upperRange = int(math.floor(animation_run_time * framesPerSecond / frameDivisor))
+
+            match transformation_type:
+                case 'REGULAR':
+                    is_instantaneous = True
+                case 'SMOOTH':
+                    smoothing_constant = 1.0
+                case 'LINEAR':
+                    pass
 
             bpy.context.view_layer.objects.active = obj
             bpy.context.scene.frame_start = 0
-            startframe = 0.0
-            transitionConst = 0.0
-
-            if add_weighted_original:
-                transitionConst = 1.0
-
             bpy.context.preferences.edit.use_global_undo = False
             original_object = bpy.context.active_object
             basisKey = 'Basis'
@@ -90,13 +98,6 @@ def transform(localxvar, localyvar, localzvar, transformation, time_span, steps_
                 activeObj.active_shape_key_index = activeObj.data.shape_keys.key_blocks.keys().index('Key ' + str(startframe))
                 bpy.ops.object.shape_key_remove()
 
-            framesPerSecond = 24
-            frameDivisor = steps_per_frame
-            upperRange = int(math.floor(time_span * framesPerSecond / frameDivisor))
-
-            if time_span == 0:
-                fast_transformation = True
-
             for f in range(upperRange+1):
                 frameIndex = f
                 trueframe = frameIndex + startframe
@@ -107,18 +108,18 @@ def transform(localxvar, localyvar, localzvar, transformation, time_span, steps_
                     
                     remainder = 0
 
-                    if not fast_transformation:
+                    if not is_instantaneous:
                         remainder = (upperRange - frameIndex) / (upperRange)
 
                     x0, y0, z0 = v.co.x, v.co.y, v.co.z
-                    xr, yr, zr = x0 * remainder * transitionConst, y0 * remainder * transitionConst, z0 * remainder * transitionConst
+                    xr, yr, zr = x0 * remainder * smoothing_constant, y0 * remainder * smoothing_constant, z0 * remainder * smoothing_constant
                     x, y, z = x0 * (1 - remainder), y0 * (1 - remainder), z0 * (1 - remainder)
                     t = ((frameIndex) * frameDivisor) / (framesPerSecond)
                     T = ((upperRange) * frameDivisor) / (framesPerSecond)
                     exec(transformationX); exec(transformationY); exec(transformationZ)
-                    activeObj.data.shape_keys.key_blocks[keyString].data[i].co.x = locals()[localxvar] + xr
-                    activeObj.data.shape_keys.key_blocks[keyString].data[i].co.y = locals()[localyvar] + yr
-                    activeObj.data.shape_keys.key_blocks[keyString].data[i].co.z = locals()[localzvar] + zr
+                    activeObj.data.shape_keys.key_blocks[keyString].data[i].co.x = locals()[variables_vector[0]] + xr
+                    activeObj.data.shape_keys.key_blocks[keyString].data[i].co.y = locals()[variables_vector[1]] + yr
+                    activeObj.data.shape_keys.key_blocks[keyString].data[i].co.z = locals()[variables_vector[2]] + zr
 
                 if ((frameIndex == 0) and (startframe != 0)):
                     activeObj.data.shape_keys.key_blocks["Key " + str(startframe)].value = 0.0
@@ -134,11 +135,14 @@ def transform(localxvar, localyvar, localzvar, transformation, time_span, steps_
                 if frameIndex < upperRange:
                     activeObj.data.shape_keys.key_blocks[keyString].value = 0.0
                     activeObj.data.shape_keys.key_blocks[keyString].keyframe_insert("value", frame=((frameIndex + 1) * frameDivisor + startframe))
-
-            if not keepOg:
-                bpy.data.objects.remove(original_object, do_unlink=True)
-            elif hideOg:
-                original_object.hide_viewport = True
+            
+            match keep_option:
+                case 'KEEP':
+                    pass
+                case 'HIDE':
+                    original_object.hide_viewport = True
+                case 'DELETE':
+                    bpy.data.objects.remove(original_object, do_unlink=True)
 
             bpy.context.preferences.edit.use_global_undo = True
             bpy.context.scene.frame_end = int(upperRange*frameDivisor + startframe)
