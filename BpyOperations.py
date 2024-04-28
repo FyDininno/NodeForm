@@ -66,7 +66,7 @@ def transform(variables_vector, equations_vector, animation_run_time, frames_per
             
             startframe = 0.0
             smoothing_constant = 0.0
-            is_instantaneous = True if animation_run_time > 0 else False
+            is_instantaneous = False if animation_run_time > 0 else True
             framesPerSecond = 24
             frameDivisor = frames_per_calculation
             upperRange = int(math.floor(animation_run_time * framesPerSecond / frameDivisor))
@@ -140,7 +140,7 @@ def transform(variables_vector, equations_vector, animation_run_time, frames_per
                 case 'KEEP':
                     pass
                 case 'HIDE':
-                    original_object.hide_viewport = True
+                    original_object.hide_set(True)
                 case 'DELETE':
                     bpy.data.objects.remove(original_object, do_unlink=True)
 

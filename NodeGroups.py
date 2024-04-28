@@ -36,7 +36,8 @@ class NODE_FORM_NT_Start_Node(Node):
 
     def draw_buttons(self, context, layout):
         layout.operator("node_form.start_button", text="Run All Paths")
-        layout.menu('node_form.start_node_menu', text='Add Node')
+        layout.menu('NODE_FORM_MT_start_node_menu', text='Add Node')
+        layout.menu('NODE_FORM_MT_start_node_preset_menu', text='Choose Preset')
 
 class NODE_FORM_NT_Merger_Node(Node):
 
@@ -85,7 +86,7 @@ class NODE_FORM_NT_Gridder_Node(Node):
     x_length: StringProperty(default='1')
     y_length: StringProperty(default='1')
     z_length: StringProperty(default='1')
-    cube_density: StringProperty(default='1')
+    cube_density: StringProperty(default='2')
     is_hollow: BoolProperty(default=False)
 
     def init(self, context):
@@ -125,7 +126,7 @@ class NODE_FORM_NT_Transformer_Node(Node):
     y_equation: StringProperty(default='β = y')
     z_equation: StringProperty(default='γ = z')
     
-    animation_run_time: StringProperty(default='10')
+    animation_run_time: StringProperty(default='5')
     frames_per_calculation: StringProperty(default='2')
     repeats: StringProperty(default='0')
 
@@ -183,7 +184,7 @@ class NODE_FORM_NT_Transformer_Node(Node):
 class NODE_FORM_MT_Start_Node_Menu(Menu):
 
     bl_label = "Start Node Menu"
-    bl_idname = "node_form.start_node_menu"
+    bl_idname = "NODE_FORM_MT_start_node_menu"
 
     def draw(self, context):
         layout = self.layout
@@ -192,7 +193,6 @@ class NODE_FORM_MT_Start_Node_Menu(Menu):
         layout.operator('node_form.create_deleter_node', text="Create Deleter Node")
         layout.operator('node_form.create_gridder_node', text="Create Gridder Node")
         layout.operator('node_form.create_transformer_node', text="Create Transformer Node")
-
 
 class NODE_FORM_OT_Start_Button(Operator):
     """Operator to find and display all downstream nodes from the selected node."""
@@ -232,8 +232,8 @@ class NODE_FORM_OT_Create_Selector_Node(Operator):
     def execute(self, context):
         node_tree = find_node_form_tree()
         if node_tree:
-            start_node = node_tree.nodes.new('node_form.selector_node')
-            start_node.location = (100, 100)
+            node = node_tree.nodes.new('node_form.selector_node')
+            node.location = (100, 100)
             return{'FINISHED'}
         else:
             return{'ERROR'}
@@ -246,8 +246,8 @@ class NODE_FORM_OT_Create_Merger_Node(Operator):
     def execute(self, context):
         node_tree = find_node_form_tree()
         if node_tree:
-            start_node = node_tree.nodes.new('node_form.merger_node')
-            start_node.location = (100, 100)
+            node = node_tree.nodes.new('node_form.merger_node')
+            node.location = (100, 100)
             return{'FINISHED'}
         else:
             return{'ERROR'}
@@ -260,8 +260,8 @@ class NODE_FORM_OT_Create_Deleter_Node(Operator):
     def execute(self, context):
         node_tree = find_node_form_tree()
         if node_tree:
-            start_node = node_tree.nodes.new('node_form.deleter_node')
-            start_node.location = (100, 100)
+            node = node_tree.nodes.new('node_form.deleter_node')
+            node.location = (100, 100)
             return{'FINISHED'}
         else:
             return{'ERROR'}
@@ -274,8 +274,8 @@ class NODE_FORM_OT_Create_Gridder_Node(Operator):
     def execute(self, context):
         node_tree = find_node_form_tree()
         if node_tree:
-            start_node = node_tree.nodes.new('node_form.gridder_node')
-            start_node.location = (100, 100)
+            node = node_tree.nodes.new('node_form.gridder_node')
+            node.location = (100, 100)
             return{'FINISHED'}
         else:
             return{'ERROR'}
@@ -288,12 +288,41 @@ class NODE_FORM_OT_Create_Transformer_Node(Operator):
     def execute(self, context):
         node_tree = find_node_form_tree()
         if node_tree:
-            start_node = node_tree.nodes.new('node_form.transformer_node')
-            start_node.location = (100, 100)
+            node = node_tree.nodes.new('node_form.transformer_node')
+            node.location = (100, 100)
             return{'FINISHED'}
         else:
             return{'ERROR'}
-        
+
+class NODE_FORM_MT_Start_Node_Preset_Menu(Menu):
+    bl_label = "Preset Menu"
+    bl_idname = "NODE_FORM_MT_start_node_preset_menu"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator('node_form.create_spherical_preset', text="Create Spherical Parameterization")
+
+
+class NODE_FORM_OT_Create_Spherical_Preset(Operator):
+    bl_label = "Create Spherical Parameterization"
+    bl_idname = "node_form.create_spherical_preset"
+
+    def execute(self, context):
+        node_tree = find_node_form_tree()
+        if node_tree:
+            
+            gridder_node = node_tree.nodes.new('node_form.gridder_node')
+            gridder_node.location = (100, 100)
+
+            transformer_node = node_tree.nodes.new('node_form.transformer_node')
+            transformer_node.location = (300, 100)
+
+            link = node_tree.links.new(gridder_node.outputs[0], transformer_node.inputs[0])
+
+            return{'FINISHED'}
+        else:
+            return{'ERROR'}
+
 def find_node_form_tree():
 
     node_tree = None
@@ -319,7 +348,9 @@ registrars = [
     NODE_FORM_OT_Create_Merger_Node,
     NODE_FORM_OT_Create_Deleter_Node, 
     NODE_FORM_OT_Create_Gridder_Node,
-    NODE_FORM_OT_Create_Transformer_Node
+    NODE_FORM_OT_Create_Transformer_Node,
+    NODE_FORM_MT_Start_Node_Preset_Menu,
+    NODE_FORM_OT_Create_Spherical_Preset,
     ]
 
 def register_ng():
