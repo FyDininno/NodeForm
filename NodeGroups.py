@@ -1,8 +1,8 @@
 import os
 import importlib.util
 import bpy
-from bpy.types import Node, GeometryNodeTree, Operator, Menu
-from bpy.props import StringProperty, BoolProperty, EnumProperty
+from bpy.types import Node, GeometryNodeTree, Operator, Menu, PropertyGroup
+from bpy.props import StringProperty, BoolProperty, EnumProperty, CollectionProperty, IntProperty
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -14,6 +14,13 @@ module_path_1 = os.path.join(current_dir, module_file_1)
 spec_1 = importlib.util.spec_from_file_location(module_name_1, module_path_1)
 ns = importlib.util.module_from_spec(spec_1)
 spec_1.loader.exec_module(ns)
+
+class NODE_FORM_PG_Dictionary_Property_Group(PropertyGroup):
+    variable: StringProperty()
+    replacement: StringProperty()
+
+class NODE_FORM_PG_Library_Property_Group(PropertyGroup):
+    library_import: StringProperty()    
 
 class NODE_FORM_GNT_Node_Form_Tree(GeometryNodeTree):
 
@@ -181,21 +188,62 @@ class NODE_FORM_NT_Transformer_Node(Node):
         row.prop(self, "keep_option", text='')
         row.prop(self, "transformation_type", text='')
 
-class NODE_FORM_MT_Start_Node_Menu(Menu):
+class NODE_FORM_NT_Dictionary_Node(Node):
 
-    bl_label = "Start Node Menu"
-    bl_idname = "NODE_FORM_MT_start_node_menu"
+    bl_idname = 'node_form.dictionary_node'
+    bl_label = "Dictionary Node"
 
-    def draw(self, context):
-        layout = self.layout
-        layout.operator('node_form.create_selector_node', text="Create Selector Node")
-        layout.operator('node_form.create_merger_node', text="Create Merger Node")
-        layout.operator('node_form.create_deleter_node', text="Create Deleter Node")
-        layout.operator('node_form.create_gridder_node', text="Create Gridder Node")
-        layout.operator('node_form.create_transformer_node', text="Create Transformer Node")
+    automation_type: StringProperty(default='DCT')
+    variable_folder: CollectionProperty(type=NODE_FORM_PG_Dictionary_Property_Group)
+
+    def init(self, context):
+        self.inputs.new('NodeSocketColor', "Dictionary/Library")
+        self.outputs.new('NodeSocketColor', "Start/Dictionary")
+
+    def draw_buttons(self, context, layout):
+        row = layout.row()
+        row.operator('node_form.folder_node_add_button', icon='PLUS', text="Add New")
+        row = layout.row()
+        row.label(text="Variable")
+        row.label(text="Replacement")
+        for i, item in enumerate(self.variable_folder):
+            row = layout.row()
+            row.prop(item, "variable", text="")
+            row.prop(item, "replacement", text="")
+            down_button = row.operator("node_form.folder_node_down_button", icon="TRIA_DOWN", text="")
+            up_button = row.operator("node_form.folder_node_up_button", icon="TRIA_UP", text="")
+            delete_button = row.operator("node_form.folder_node_delete_button", icon="X", text="")
+            down_button.index = i
+            up_button.index = i
+            delete_button.index = i
+
+class NODE_FORM_NT_Library_Import_Node(Node):
+
+    bl_idname = 'node_form.library_import_node'
+    bl_label = "Library Import Node"
+
+    automation_type: StringProperty(default='LIB')
+    variable_folder: CollectionProperty(type=NODE_FORM_PG_Library_Property_Group)
+
+    def init(self, context):
+        self.outputs.new('NodeSocketColor', "Start/Dictionary")
+    
+    def draw_buttons(self, context, layout):
+        row = layout.row()
+        row.operator('node_form.folder_node_add_button', icon='PLUS', text="Add New")
+        row = layout.row()
+        row.label(text="Library Name")
+        for i, item in enumerate(self.variable_folder):
+            row = layout.row()
+            row.prop(item, "library_import", text="")
+            down_button = row.operator("node_form.folder_node_down_button", icon="TRIA_DOWN", text="")
+            up_button = row.operator("node_form.folder_node_up_button", icon="TRIA_UP", text="")
+            delete_button = row.operator("node_form.folder_node_delete_button", icon="X", text="")
+            down_button.index = i
+            up_button.index = i
+            delete_button.index = i
 
 class NODE_FORM_OT_Start_Button(Operator):
-    """Operator to find and display all downstream nodes from the selected node."""
     bl_idname = "node_form.start_button"
     bl_label = "Start Button"
     
@@ -294,14 +342,85 @@ class NODE_FORM_OT_Create_Transformer_Node(Operator):
         else:
             return{'ERROR'}
 
-class NODE_FORM_MT_Start_Node_Preset_Menu(Menu):
-    bl_label = "Preset Menu"
-    bl_idname = "NODE_FORM_MT_start_node_preset_menu"
+class NODE_FORM_OT_Create_Dictionary_Node(Operator):
+    bl_label = "Create Dictionary Node"
+    bl_idname = "node_form.create_dictionary_node"
 
-    def draw(self, context):
-        layout = self.layout
-        layout.operator('node_form.create_spherical_preset', text="Create Spherical Parameterization")
+    def execute(self, context):
+        node_tree = find_node_form_tree()
+        if node_tree:
+            node = node_tree.nodes.new('node_form.dictionary_node')
+            node.location = (100, 100)
+            return{'FINISHED'}
+        else:
+            return{'ERROR'}
 
+class NODE_FORM_OT_Create_Dictionary_Node(Operator):
+
+    bl_label = "Create Library Import Node"
+    bl_idname = "node_form.create_library_import_node"
+
+    def execute(self, context):
+        node_tree = find_node_form_tree()
+        if node_tree:
+            node = node_tree.nodes.new('node_form.library_import_node')
+            node.location = (100, 100)
+            return{'FINISHED'}
+        else:
+            return{'ERROR'}
+
+class NODE_FORM_OT_Folder_Node_Down_Button(Operator):
+
+    bl_label = "Dictionary Node Down Button"
+    bl_idname = "node_form.folder_node_down_button"
+
+    index: IntProperty()
+
+    def execute(self, context):
+        node = context.node
+        try:
+            node.variable_folder.move(self.index, self.index+1)
+            return {'FINISHED'}
+        except IndexError:
+            return {'INDEX ERROR'}
+
+class NODE_FORM_OT_Folder_Node_Up_Button(Operator):
+    bl_label = "Dictionary Node Up Button"
+    bl_idname = "node_form.folder_node_up_button"
+
+    index: IntProperty()
+
+    def execute(self, context):
+        node = context.node
+        node = context.node
+        try:
+            node.variable_folder.move(self.index, self.index-1)
+            return {'FINISHED'}
+        except IndexError:
+            return {'INDEX ERROR'}
+
+class NODE_FORM_OT_Folder_Node_Delete_Button(Operator):
+    bl_label = "Dictionary Node Delete Button"
+    bl_idname = "node_form.folder_node_delete_button"
+
+    index: IntProperty()
+
+    def execute(self, context):
+        node = context.node
+        try:
+            node.variable_folder.remove(self.index)
+            return {'FINISHED'}
+        except IndexError:
+            return {'INDEX ERROR'}
+
+class NODE_FORM_OT_Folder_Node_Add_Button(Operator):
+    bl_label = "Dictionary Node Add Button"
+    bl_idname = "node_form.folder_node_add_button"
+
+    def execute(self, context):
+        node = context.node
+        node.variable_folder.add()
+        return {'FINISHED'}
 
 class NODE_FORM_OT_Create_Spherical_Preset(Operator):
     bl_label = "Create Spherical Parameterization"
@@ -323,6 +442,65 @@ class NODE_FORM_OT_Create_Spherical_Preset(Operator):
         else:
             return{'ERROR'}
 
+class NODE_FORM_MT_Start_Node_Menu(Menu):
+
+    bl_label = "Start Node Menu"
+    bl_idname = "NODE_FORM_MT_start_node_menu"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator('node_form.create_selector_node', text="Create Selector Node")
+        layout.operator('node_form.create_merger_node', text="Create Merger Node")
+        layout.operator('node_form.create_deleter_node', text="Create Deleter Node")
+        layout.operator('node_form.create_gridder_node', text="Create Gridder Node")
+        layout.operator('node_form.create_transformer_node', text="Create Transformer Node")
+        layout.operator('node_form.create_dictionary_node', text="Create Dictionary Node")
+        layout.operator('node_form.create_library_import_node', text="Create Library Import Node")
+
+class NODE_FORM_MT_Start_Node_Preset_Menu(Menu):
+    bl_label = "Preset Menu"
+    bl_idname = "NODE_FORM_MT_start_node_preset_menu"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator('node_form.create_spherical_preset', text="Create Spherical Parameterization")
+
+registrars = [
+    NODE_FORM_PG_Dictionary_Property_Group,
+    NODE_FORM_PG_Library_Property_Group,
+    NODE_FORM_GNT_Node_Form_Tree, 
+    NODE_FORM_NT_Start_Node, 
+    NODE_FORM_NT_Merger_Node,
+    NODE_FORM_NT_Selector_Node, 
+    NODE_FORM_NT_Deleter_Node, 
+    NODE_FORM_NT_Gridder_Node,
+    NODE_FORM_NT_Transformer_Node,
+    NODE_FORM_NT_Dictionary_Node,
+    NODE_FORM_NT_Library_Import_Node,
+    NODE_FORM_OT_Start_Button, 
+    NODE_FORM_OT_Create_Selector_Node, 
+    NODE_FORM_OT_Create_Merger_Node,
+    NODE_FORM_OT_Create_Deleter_Node, 
+    NODE_FORM_OT_Create_Gridder_Node,
+    NODE_FORM_OT_Create_Transformer_Node,
+    NODE_FORM_OT_Create_Spherical_Preset,
+    NODE_FORM_OT_Create_Dictionary_Node,
+    NODE_FORM_OT_Folder_Node_Add_Button,
+    NODE_FORM_OT_Folder_Node_Delete_Button,
+    NODE_FORM_OT_Folder_Node_Up_Button,
+    NODE_FORM_OT_Folder_Node_Down_Button,
+    NODE_FORM_MT_Start_Node_Menu,
+    NODE_FORM_MT_Start_Node_Preset_Menu,
+    ]
+
+def register_ng():
+    for nodeclass in registrars:
+        bpy.utils.register_class(nodeclass)
+
+def unregister_ng():
+    for nodeclass in registrars:
+        bpy.utils.unregister_class(nodeclass)
+
 def find_node_form_tree():
 
     node_tree = None
@@ -334,29 +512,3 @@ def find_node_form_tree():
         self.report({'ERROR'}, "No Node Form Tree found")
         return None
     
-registrars = [
-    NODE_FORM_GNT_Node_Form_Tree, 
-    NODE_FORM_NT_Start_Node, 
-    NODE_FORM_NT_Merger_Node,
-    NODE_FORM_NT_Selector_Node, 
-    NODE_FORM_NT_Deleter_Node, 
-    NODE_FORM_NT_Gridder_Node,
-    NODE_FORM_NT_Transformer_Node,
-    NODE_FORM_MT_Start_Node_Menu,
-    NODE_FORM_OT_Start_Button, 
-    NODE_FORM_OT_Create_Selector_Node, 
-    NODE_FORM_OT_Create_Merger_Node,
-    NODE_FORM_OT_Create_Deleter_Node, 
-    NODE_FORM_OT_Create_Gridder_Node,
-    NODE_FORM_OT_Create_Transformer_Node,
-    NODE_FORM_MT_Start_Node_Preset_Menu,
-    NODE_FORM_OT_Create_Spherical_Preset,
-    ]
-
-def register_ng():
-    for nodeclass in registrars:
-        bpy.utils.register_class(nodeclass)
-
-def unregister_ng():
-    for nodeclass in registrars:
-        bpy.utils.unregister_class(nodeclass)
