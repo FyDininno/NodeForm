@@ -6,14 +6,14 @@ import bpy
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Construct the path to the module you want to import
-module_name_1 = "BpyOperations"  # Name of the module you want to import
+module_name_1 = "NodeMechanics"  # Name of the module you want to import
 module_file_1 = module_name_1 + ".py"
 module_path_1 = os.path.join(current_dir, module_file_1)
 
 # Load the module
 spec_1 = importlib.util.spec_from_file_location(module_name_1, module_path_1)
-sp = importlib.util.module_from_spec(spec_1)
-spec_1.loader.exec_module(sp)
+nm = importlib.util.module_from_spec(spec_1)
+spec_1.loader.exec_module(nm)
 
 def get_forward_paths(start_node):
     def visit(node, path):
@@ -95,10 +95,10 @@ def execute_node(node):
         match getattr(node, 'automation_type'):
 
             case 'SLT':
-                sp.bpy_select_all()
+                nm.bpy_select_all()
 
             case 'DEL':
-                sp.bpy_delete_selected_objects()
+                nm.bpy_delete_selected_objects()
 
             case 'GRD':
                 evaluated_strings = evaluate_strings(
@@ -116,10 +116,10 @@ def execute_node(node):
                 offset_vector = evaluated_strings[3:6]
                 cube_density = evaluated_strings[6]
                 
-                sp.grid(lengths_vector, offset_vector, cube_density)
+                nm.grid(lengths_vector, offset_vector, cube_density)
                 
                 if node.is_hollow:
-                    sp.hollow_grid(offset_vector, lengths_vector, cube_density)
+                    nm.hollow_grid(offset_vector, lengths_vector, cube_density)
 
             case 'TFM':
                 
@@ -147,7 +147,7 @@ def execute_node(node):
                 transformation_type = node.transformation_type
                 keep_option = node.keep_option
 
-                sp.transform(
+                nm.transform(
                     variable_vector,
                     equations_vector,
                     animation_run_time,
@@ -160,7 +160,10 @@ def execute_node(node):
 def evaluate_strings(list):
     return_list = []
     for item in list:
-        return_list.append(eval(item, {'__builtins__': None, 'math': math}))
+        try:
+            return_list.append(eval(item, {'__builtins__': None, 'math': math}))
+        except TypeError:
+            print('Expression is not evaluable')
     return return_list
 
 def execute_all_paths(start_node):
@@ -195,7 +198,7 @@ def get_start_node():
             return None
 
 def update_replacement_dictionary():
-    
+
     replacement_dictionary = get_replacement_dictionary()
 
     for path in get_back_paths(get_start_node()):
@@ -219,16 +222,18 @@ def update_replacement_dictionary():
 
             elif node.automation_type == 'LIB':
 
+                var_folder = node.variable_folder
+
                 for i in range(len(var_folder)):
                     exec('import ' + var_folder[i].library_import)
 
-            else:
-
-                print('not a dictionary node')
-                pass
+            elif node.automation_type != 'SRT':
+                print('Invalid Library or Dictionary Connection')
 
         replacement_dictionary = append_unique_keys(replacement_dictionary, path_dictionary)
+
         set_replacement_dictionary(replacement_dictionary)
+
 
 def substitute_keys_into_values(target, modifier):
     # Result dictionary that will store updated key-value pairs
@@ -250,20 +255,16 @@ def substitute_keys_into_values(target, modifier):
     return result
 
 def append_unique_keys(target, appendage):
-    # Create a copy of dic1 to avoid modifying the original dictionary
-    result = target.copy()
     
-    # Iterate through each key and value in dic2
     for key, value in appendage.items():
-        # Check if the key is not already in dic1
-        if key not in result:
-            # Add the key-value pair from dic2 to the result
-            result[key] = value
-    
-    return result
+        # Add to target only if key is not already in target
+        if key not in target:
+            target[key] = value
+        else:
+            print("WARNING: You have more than one definition for: \"" + key + "\"")
+    return target
 
 def substitute_keys_into_strings(modifying_dictionary, strings):
-    print(modifying_dictionary)
     # Flag to check if the input was a single string
     single_string_input = False
     
@@ -290,17 +291,23 @@ def substitute_keys_into_strings(modifying_dictionary, strings):
         return modified_strings
 
 def get_replacement_dictionary():
+
     return_dictionary={}
     replacement_dictionary = bpy.context.scene.replacement_dictionary
+    
     for i in range(len(replacement_dictionary)):
-        return_dictionary[replacement_dictionary[i].variable] = replacement_dictionary[i].replacement
+        variable = replacement_dictionary[i].variable
+        replacement = replacement_dictionary[i].replacement
+        return_dictionary[variable] = replacement
+
     return return_dictionary
+
 
 def set_replacement_dictionary(dictionary):
     bpy.context.scene.replacement_dictionary.clear()
     i = 0
     for key in dictionary:
         bpy.context.scene.replacement_dictionary.add()
-        bpy.contextscene.replacement_dictionary[i].variable = key
+        bpy.context.scene.replacement_dictionary[i].variable = key
         bpy.context.scene.replacement_dictionary[i].replacement = dictionary[key]
         i += 1

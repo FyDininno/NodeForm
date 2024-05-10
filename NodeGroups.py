@@ -144,9 +144,9 @@ class NODE_FORM_NT_Transformer_Node(Node):
             name="Tranformation Type",
             description="Choose an option",
             items=[
-                ('REGULAR', "Regular Transformation", "Spatial coordinates will be transformed immediately (use if time, 't', is in your function)"),
-                ('SMOOTH', "Smooth Tranformation", "Spatial coordinates will be smoothly interpolated (do not use for variables with negative exponents)"),
-                ('LINEAR', "Linear Transformation", "Spatial coordinates will be linearly interpolated")
+                ('REGULAR', "Direct Parameterization", "Spatial coordinates will be transformed immediately (use if time, 't', is in your function)"),
+                ('SMOOTH', "Delayed Linear Coordinate Interpolation", "Spatial coordinates will be smoothly interpolated (do not use for variables with negative exponents)"),
+                ('LINEAR', "Delayed Coordinate Slide", "Spatial coordinates will be linearly interpolated")
             ],
             default='REGULAR'
         )
@@ -252,7 +252,7 @@ class NODE_FORM_OT_Start_Button(Operator):
     
     def execute(self, context):
 
-        Scene.variable_folder_is_updated = True
+        setattr(bpy.context.scene, 'replacement_dictionary_is_updated', True)
 
         node_form_object = bpy.data.objects.get('Node Form')
 
@@ -455,12 +455,12 @@ class NODE_FORM_MT_Start_Node_Menu(Menu):
     def draw(self, context):
         layout = self.layout
         layout.operator('node_form.create_selector_node', text="Create Selector Node")
-        layout.operator('node_form.create_merger_node', text="Create Merger Node")
         layout.operator('node_form.create_deleter_node', text="Create Deleter Node")
         layout.operator('node_form.create_gridder_node', text="Create Gridder Node")
         layout.operator('node_form.create_transformer_node', text="Create Transformer Node")
         layout.operator('node_form.create_dictionary_node', text="Create Dictionary Node")
         layout.operator('node_form.create_library_import_node', text="Create Library Import Node")
+        layout.operator('node_form.create_merger_node', text="Create Merger Node")
 
 class NODE_FORM_MT_Start_Node_Preset_Menu(Menu):
     bl_label = "Preset Menu"
@@ -503,7 +503,7 @@ def register_ng():
     for nodeclass in registrars:
         bpy.utils.register_class(nodeclass)
     Scene.replacement_dictionary = CollectionProperty(type=NODE_FORM_PG_Dictionary_Property_Group)
-    Scene.replacement_dictionary_is_updated = BoolProperty(default=True)
+    Scene.replacement_dictionary_is_updated = BoolProperty(default=True) #This is the parent object. context.scene is the instance running in the blender folder
 
 def unregister_ng():
     for nodeclass in registrars:
