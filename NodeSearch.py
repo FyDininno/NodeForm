@@ -95,10 +95,21 @@ def execute_node(node):
         match getattr(node, 'automation_type'):
 
             case 'SLT':
-                nm.bpy_select_all()
+                match node.selection_mode:
+                    case 'SAL':
+                        nm.bpy_select_all()
+                    case 'SBN':
+                        nm.bpy_select_by_name(node.selection_name)
+                    case 'DSAL':
+                        nm.bpy_deselect_all()
+                    case 'DSBN':
+                        nm.bpy_deselect_by_name(node.selection_name)
 
             case 'DEL':
-                nm.bpy_delete_selected_objects()
+                if node.deletion_mode == 'DELETE':
+                    nm.bpy_delete_selected_objects()
+                elif node.deletion_mode == 'HIDE':
+                    nm.bpy_hide_selected_objects()
 
             case 'GRD':
                 evaluated_strings = evaluate_strings(
@@ -157,13 +168,32 @@ def execute_node(node):
                     keep_option,
                 )
 
-def evaluate_strings(list):
+def evaluate_strings(expressions, library_collection):
+    library_names = []
+
+    for i in range(len(library_collection)): #This converts the collection property into a list
+        library_names.append(library_collection[i].library_import)
+
     return_list = []
-    for item in list:
+    # Create a dictionary to hold the allowed libraries
+    allowed_libraries = {'__builtins__': None}
+    
+    # Import and add libraries to the allowed_libraries dictionary
+    for name in library_names:
         try:
-            return_list.append(eval(item, {'__builtins__': None, 'math': math}))
-        except TypeError:
-            print('Expression is not evaluable')
+            module = importlib.import_module(name)
+            allowed_libraries[name] = module
+        except ImportError:
+            print(f'Failed to import {name}')
+    
+    # Evaluate each expression in the list
+    for item in expressions:
+        try:
+            result = eval(item, allowed_libraries)
+            return_list.append(result)
+        except Exception as e:
+            print(f'Error evaluating {item}: {str(e)}')
+    
     return return_list
 
 def execute_all_paths(start_node):
@@ -234,7 +264,6 @@ def update_replacement_dictionary():
 
         set_replacement_dictionary(replacement_dictionary)
 
-
 def substitute_keys_into_values(target, modifier):
     # Result dictionary that will store updated key-value pairs
     result = {}
@@ -301,7 +330,6 @@ def get_replacement_dictionary():
         return_dictionary[variable] = replacement
 
     return return_dictionary
-
 
 def set_replacement_dictionary(dictionary):
     bpy.context.scene.replacement_dictionary.clear()

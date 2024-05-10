@@ -64,88 +64,94 @@ def transform(variables_vector, equations_vector, animation_run_time, frames_per
 
         for obj in bpy.context.selected_objects:
             
-            startframe = 0.0
-            smoothing_constant = 0.0
-            is_instantaneous = False if animation_run_time > 0 else True
-            framesPerSecond = 24
-            frameDivisor = frames_per_calculation
-            upperRange = int(math.floor(animation_run_time * framesPerSecond / frameDivisor))
+            if obj and obj.type == 'MESH':
 
-            match transformation_type:
-                case 'REGULAR':
-                    is_instantaneous = True
-                case 'SMOOTH':
-                    smoothing_constant = 1.0
-                case 'LINEAR':
-                    pass
+                mesh = obj.data
+                
+                if len(mesh.vertices) > 0:
 
-            bpy.context.view_layer.objects.active = obj
-            bpy.context.scene.frame_start = 0
-            bpy.context.preferences.edit.use_global_undo = False
-            original_object = bpy.context.active_object
-            basisKey = 'Basis'
+                    startframe = 0.0
+                    smoothing_constant = 0.0
+                    is_instantaneous = False if animation_run_time > 0 else True
+                    framesPerSecond = 24
+                    frameDivisor = frames_per_calculation
+                    upperRange = int(math.floor(animation_run_time * framesPerSecond / frameDivisor))
 
-            if has_shape_key(original_object, 'Basis'):
-                startframe = get_last_keyframe(original_object)
-                basisKey = 'Key ' + str(startframe)
-            else:
-                obj.shape_key_add(name="Basis")
+                    match transformation_type:
+                        case 'REGULAR':
+                            is_instantaneous = True
+                        case 'SMOOTH':
+                            smoothing_constant = 1.0
+                        case 'LINEAR':
+                            pass
 
-            bpy.ops.object.duplicate()
-            activeObj = bpy.context.active_object
+                    bpy.context.view_layer.objects.active = obj
+                    bpy.context.scene.frame_start = 0
+                    bpy.context.preferences.edit.use_global_undo = False
+                    original_object = bpy.context.active_object
+                    basisKey = 'Basis'
 
-            if startframe!=0:
-                activeObj.active_shape_key_index = activeObj.data.shape_keys.key_blocks.keys().index('Key ' + str(startframe))
-                bpy.ops.object.shape_key_remove()
+                    if has_shape_key(original_object, 'Basis'):
+                        startframe = get_last_keyframe(original_object)
+                        basisKey = 'Key ' + str(startframe)
+                    else:
+                        obj.shape_key_add(name="Basis")
 
-            for f in range(upperRange+1):
-                frameIndex = f
-                trueframe = frameIndex + startframe
-                keyString = 'Key ' + str(float(startframe + (frameIndex) * frameDivisor))
-                activeObj.shape_key_add(name=keyString)
+                    bpy.ops.object.duplicate()
+                    activeObj = bpy.context.active_object
 
-                for i, v in enumerate(original_object.data.shape_keys.key_blocks[basisKey].data):
+                    if startframe!=0:
+                        activeObj.active_shape_key_index = activeObj.data.shape_keys.key_blocks.keys().index('Key ' + str(startframe))
+                        bpy.ops.object.shape_key_remove()
+
+                    for f in range(upperRange+1):
+                        frameIndex = f
+                        trueframe = frameIndex + startframe
+                        keyString = 'Key ' + str(float(startframe + (frameIndex) * frameDivisor))
+                        activeObj.shape_key_add(name=keyString)
+
+                        for i, v in enumerate(original_object.data.shape_keys.key_blocks[basisKey].data):
+                            
+                            remainder = 0
+
+                            if not is_instantaneous:
+                                remainder = (upperRange - frameIndex) / (upperRange)
+
+                            x0, y0, z0 = v.co.x, v.co.y, v.co.z
+                            xr, yr, zr = x0 * remainder * smoothing_constant, y0 * remainder * smoothing_constant, z0 * remainder * smoothing_constant
+                            x, y, z = x0 * (1 - remainder), y0 * (1 - remainder), z0 * (1 - remainder)
+                            t = ((frameIndex) * frameDivisor) / (framesPerSecond)
+                            T = ((upperRange) * frameDivisor) / (framesPerSecond)
+                            exec(transformationX); exec(transformationY); exec(transformationZ)
+                            activeObj.data.shape_keys.key_blocks[keyString].data[i].co.x = locals()[variables_vector[0]] + xr
+                            activeObj.data.shape_keys.key_blocks[keyString].data[i].co.y = locals()[variables_vector[1]] + yr
+                            activeObj.data.shape_keys.key_blocks[keyString].data[i].co.z = locals()[variables_vector[2]] + zr
+
+                        if ((frameIndex == 0) and (startframe != 0)):
+                            activeObj.data.shape_keys.key_blocks["Key " + str(startframe)].value = 0.0
+                            activeObj.data.shape_keys.key_blocks["Key " + str(startframe)].keyframe_insert("value", frame=(frameDivisor + startframe))
+
+                        if frameIndex != 0 or startframe != 0:
+                            activeObj.data.shape_keys.key_blocks[keyString].value = 0.0
+                            activeObj.data.shape_keys.key_blocks[keyString].keyframe_insert("value", frame=((frameIndex - 1) * frameDivisor + startframe))
+
+                        activeObj.data.shape_keys.key_blocks[keyString].value = 1.0
+                        activeObj.data.shape_keys.key_blocks[keyString].keyframe_insert("value", frame=((frameIndex) * frameDivisor + startframe))
+
+                        if frameIndex < upperRange:
+                            activeObj.data.shape_keys.key_blocks[keyString].value = 0.0
+                            activeObj.data.shape_keys.key_blocks[keyString].keyframe_insert("value", frame=((frameIndex + 1) * frameDivisor + startframe))
                     
-                    remainder = 0
+                    match keep_option:
+                        case 'KEEP':
+                            pass
+                        case 'HIDE':
+                            original_object.hide_set(True)
+                        case 'DELETE':
+                            bpy.data.objects.remove(original_object, do_unlink=True)
 
-                    if not is_instantaneous:
-                        remainder = (upperRange - frameIndex) / (upperRange)
-
-                    x0, y0, z0 = v.co.x, v.co.y, v.co.z
-                    xr, yr, zr = x0 * remainder * smoothing_constant, y0 * remainder * smoothing_constant, z0 * remainder * smoothing_constant
-                    x, y, z = x0 * (1 - remainder), y0 * (1 - remainder), z0 * (1 - remainder)
-                    t = ((frameIndex) * frameDivisor) / (framesPerSecond)
-                    T = ((upperRange) * frameDivisor) / (framesPerSecond)
-                    exec(transformationX); exec(transformationY); exec(transformationZ)
-                    activeObj.data.shape_keys.key_blocks[keyString].data[i].co.x = locals()[variables_vector[0]] + xr
-                    activeObj.data.shape_keys.key_blocks[keyString].data[i].co.y = locals()[variables_vector[1]] + yr
-                    activeObj.data.shape_keys.key_blocks[keyString].data[i].co.z = locals()[variables_vector[2]] + zr
-
-                if ((frameIndex == 0) and (startframe != 0)):
-                    activeObj.data.shape_keys.key_blocks["Key " + str(startframe)].value = 0.0
-                    activeObj.data.shape_keys.key_blocks["Key " + str(startframe)].keyframe_insert("value", frame=(frameDivisor + startframe))
-
-                if frameIndex != 0 or startframe != 0:
-                    activeObj.data.shape_keys.key_blocks[keyString].value = 0.0
-                    activeObj.data.shape_keys.key_blocks[keyString].keyframe_insert("value", frame=((frameIndex - 1) * frameDivisor + startframe))
-
-                activeObj.data.shape_keys.key_blocks[keyString].value = 1.0
-                activeObj.data.shape_keys.key_blocks[keyString].keyframe_insert("value", frame=((frameIndex) * frameDivisor + startframe))
-
-                if frameIndex < upperRange:
-                    activeObj.data.shape_keys.key_blocks[keyString].value = 0.0
-                    activeObj.data.shape_keys.key_blocks[keyString].keyframe_insert("value", frame=((frameIndex + 1) * frameDivisor + startframe))
-            
-            match keep_option:
-                case 'KEEP':
-                    pass
-                case 'HIDE':
-                    original_object.hide_set(True)
-                case 'DELETE':
-                    bpy.data.objects.remove(original_object, do_unlink=True)
-
-            bpy.context.preferences.edit.use_global_undo = True
-            bpy.context.scene.frame_end = int(upperRange*frameDivisor + startframe)
+                    bpy.context.preferences.edit.use_global_undo = True
+                    bpy.context.scene.frame_end = int(upperRange*frameDivisor + startframe)
 
 def bpy_select_all():
     bpy.ops.object.select_all(action='SELECT')
@@ -155,10 +161,24 @@ def bpy_select_all():
         bpy.context.view_layer.objects.active = None
     return
 
+def bpy_select_by_name(object_name):
+    obj = bpy.data.objects.get(object_name)
+
+    if obj:
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
+
 def bpy_deselect_all():
     bpy.ops.object.select_all(action='DESELECT')
     bpy.context.view_layer.objects.active = None
-    
+
+def bpy_deselect_by_name(object_name):
+
+    obj = bpy.data.objects.get(object_name)
+
+    if obj:
+        obj.select_set(False)
+
 def bpy_delete_selected_objects():
     # Check if there are selected objects
     if bpy.context.selected_objects:
@@ -166,6 +186,16 @@ def bpy_delete_selected_objects():
         bpy.ops.object.mode_set(mode='OBJECT')
         # Delete all selected objects
         bpy.ops.object.delete()
+    else:
+        bpy.context.view_layer.objects.active = None
+
+def bpy_hide_selected_objects():
+    # Check if there are selected objects
+    if bpy.context.selected_objects:
+        # Set the mode to object mode to avoid context errors
+        bpy.ops.object.mode_set(mode='OBJECT')
+        # Delete all selected objects
+        bpy.ops.object.hide_set(True)
     else:
         bpy.context.view_layer.objects.active = None
 

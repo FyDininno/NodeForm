@@ -49,18 +49,6 @@ class NODE_FORM_NT_Start_Node(Node):
         layout.menu('NODE_FORM_MT_start_node_menu', text='Add Node')
         layout.menu('NODE_FORM_MT_start_node_preset_menu', text='Choose Preset')
 
-class NODE_FORM_NT_Merger_Node(Node):
-
-    bl_idname = 'node_form.merger_node'
-    bl_label = "Merger Node"
-
-    automation_type: StringProperty(default='MRG')
-
-    def init(self, context):
-        self.outputs.new('NodeSocketColor', "")
-        self.inputs.new('NodeSocketColor', "")
-        self.inputs.new('NodeSocketColor', "")
-
 class NODE_FORM_NT_Selector_Node(Node):
 
     bl_idname = 'node_form.selector_node'
@@ -68,9 +56,28 @@ class NODE_FORM_NT_Selector_Node(Node):
 
     automation_type: StringProperty(default='SLT')
 
+    selection_mode: EnumProperty(
+            name="Selection Mode",
+            description="Choose an option",
+            items=[
+                ('SAL', "Select All", "All objects in the scene will be selected"),
+                ('SBN', "Select By Name", "The object in the scene with the name will be selected"),
+                ('DSAL', "Deselect All", "All objects in the scene will be deselected"),
+                ('DSBN', "Deselect By Name", "The object in the scene with the name will be deselected"),
+            ],
+            default='SAL'
+        )
+    
+    selection_name: StringProperty()
+
     def init(self, context):
         self.outputs.new('NodeSocketColor', "")
         self.inputs.new('NodeSocketColor', "")
+
+    def draw_buttons(self, context, layout):
+        layout.prop(self, "selection_mode", text='')
+        if self.selection_mode in ['SBN','DSBN']:
+            layout.prop(self, 'selection_name', text='')
 
 class NODE_FORM_NT_Deleter_Node(Node):
 
@@ -79,9 +86,22 @@ class NODE_FORM_NT_Deleter_Node(Node):
 
     automation_type: StringProperty(default='DEL')
 
+    deletion_mode: EnumProperty(
+            name="Deletion Mode",
+            description="Choose an option",
+            items=[
+                ('DELETE', "Delete Selected", "The selected objects will be deleted"),
+                ('HIDE', "Hide Selected", "The selected objects will be hidden"),
+            ],
+            default='DELETE'
+        )
+
     def init(self, context):
         self.outputs.new('NodeSocketColor', "")
         self.inputs.new('NodeSocketColor', "")
+    
+    def draw_buttons(self, context, layout):
+        layout.prop(self, "deletion_mode", text='')
 
 class NODE_FORM_NT_Gridder_Node(Node):
 
@@ -145,7 +165,7 @@ class NODE_FORM_NT_Transformer_Node(Node):
             description="Choose an option",
             items=[
                 ('REGULAR', "Direct Parameterization", "Spatial coordinates will be transformed immediately (use if time, 't', is in your function)"),
-                ('SMOOTH', "Delayed Linear Coordinate Interpolation", "Spatial coordinates will be smoothly interpolated (do not use for variables with negative exponents)"),
+                ('SMOOTH', "Delayed Coordinate Interpolation", "Spatial coordinates will be smoothly interpolated (do not use for variables with negative exponents)"),
                 ('LINEAR', "Delayed Coordinate Slide", "Spatial coordinates will be linearly interpolated")
             ],
             default='REGULAR'
@@ -246,6 +266,18 @@ class NODE_FORM_NT_Library_Import_Node(Node):
             up_button.index = i
             delete_button.index = i
 
+class NODE_FORM_NT_Merger_Node(Node):
+
+    bl_idname = 'node_form.merger_node'
+    bl_label = "Merger Node"
+
+    automation_type: StringProperty(default='MRG')
+
+    def init(self, context):
+        self.outputs.new('NodeSocketColor', "")
+        self.inputs.new('NodeSocketColor', "")
+        self.inputs.new('NodeSocketColor', "")
+
 class NODE_FORM_OT_Start_Button(Operator):
     bl_idname = "node_form.start_button"
     bl_label = "Start Button"
@@ -286,20 +318,6 @@ class NODE_FORM_OT_Create_Selector_Node(Operator):
         node_tree = ns.find_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.selector_node')
-            node.location = (100, 100)
-            return{'FINISHED'}
-        else:
-            return{'ERROR'}
-
-class NODE_FORM_OT_Create_Merger_Node(Operator):
-    
-    bl_label = "Create Merger Node"
-    bl_idname = "node_form.create_merger_node"
-
-    def execute(self, context):
-        node_tree = ns.find_node_form_tree()
-        if node_tree:
-            node = node_tree.nodes.new('node_form.merger_node')
             node.location = (100, 100)
             return{'FINISHED'}
         else:
@@ -369,6 +387,20 @@ class NODE_FORM_OT_Create_Library_Import_Node(Operator):
         node_tree = ns.find_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.library_import_node')
+            node.location = (100, 100)
+            return{'FINISHED'}
+        else:
+            return{'ERROR'}
+
+class NODE_FORM_OT_Create_Merger_Node(Operator):
+    
+    bl_label = "Create Merger Node"
+    bl_idname = "node_form.create_merger_node"
+
+    def execute(self, context):
+        node_tree = ns.find_node_form_tree()
+        if node_tree:
+            node = node_tree.nodes.new('node_form.merger_node')
             node.location = (100, 100)
             return{'FINISHED'}
         else:
@@ -470,6 +502,12 @@ class NODE_FORM_MT_Start_Node_Preset_Menu(Menu):
         layout = self.layout
         layout.operator('node_form.create_spherical_preset', text="Create Spherical Parameterization")
 
+temp_variables = []
+
+def delete_temporary_variables():
+    for pg in temp_variables:
+        del pg
+
 registrars = [
     NODE_FORM_PG_Dictionary_Property_Group,
     NODE_FORM_PG_Library_Property_Group,
@@ -504,9 +542,13 @@ def register_ng():
         bpy.utils.register_class(nodeclass)
     Scene.replacement_dictionary = CollectionProperty(type=NODE_FORM_PG_Dictionary_Property_Group)
     Scene.replacement_dictionary_is_updated = BoolProperty(default=True) #This is the parent object. context.scene is the instance running in the blender folder
+    Scene.imported_libraries = CollectionProperty(type=NODE_FORM_PG_Library_Property_Group)
 
 def unregister_ng():
     for nodeclass in registrars:
         bpy.utils.unregister_class(nodeclass)
     del Scene.replacement_dictionary
     del Scene.replacement_dictionary_is_updated
+    del Scene.imported_libraries
+
+    delete_temporary_variables()
