@@ -1,7 +1,7 @@
 import os
 import importlib.util
 import bpy
-from bpy.types import Node, GeometryNodeTree, Operator, Menu, PropertyGroup
+from bpy.types import Node, GeometryNodeTree, Operator, Menu, PropertyGroup, Scene
 from bpy.props import StringProperty, BoolProperty, EnumProperty, CollectionProperty, IntProperty
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -38,8 +38,11 @@ class NODE_FORM_NT_Start_Node(Node):
     bl_label = "Start Node"
     bl_icon = 'PLAY'
 
+    automation_type: StringProperty(default='SRT')
+
     def init(self, context):
-        self.outputs.new('NodeSocketColor', "")
+        self.outputs.new('NodeSocketColor', "Any")
+        self.inputs.new('NodeSocketFloat', "Library/Dictionary")
 
     def draw_buttons(self, context, layout):
         layout.operator("node_form.start_button", text="Run All Paths")
@@ -197,8 +200,8 @@ class NODE_FORM_NT_Dictionary_Node(Node):
     variable_folder: CollectionProperty(type=NODE_FORM_PG_Dictionary_Property_Group)
 
     def init(self, context):
-        self.inputs.new('NodeSocketColor', "Dictionary/Library")
-        self.outputs.new('NodeSocketColor', "Start/Dictionary")
+        self.inputs.new('NodeSocketFloat', "Dictionary/Library")
+        self.outputs.new('NodeSocketFloat', "Start/Dictionary")
 
     def draw_buttons(self, context, layout):
         row = layout.row()
@@ -226,7 +229,7 @@ class NODE_FORM_NT_Library_Import_Node(Node):
     variable_folder: CollectionProperty(type=NODE_FORM_PG_Library_Property_Group)
 
     def init(self, context):
-        self.outputs.new('NodeSocketColor', "Start/Dictionary")
+        self.outputs.new('NodeSocketFloat', "Start/Dictionary")
     
     def draw_buttons(self, context, layout):
         row = layout.row()
@@ -248,6 +251,8 @@ class NODE_FORM_OT_Start_Button(Operator):
     bl_label = "Start Button"
     
     def execute(self, context):
+
+        Scene.variable_folder_is_updated = True
 
         node_form_object = bpy.data.objects.get('Node Form')
 
@@ -278,7 +283,7 @@ class NODE_FORM_OT_Create_Selector_Node(Operator):
     bl_idname = "node_form.create_selector_node"
 
     def execute(self, context):
-        node_tree = find_node_form_tree()
+        node_tree = ns.find_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.selector_node')
             node.location = (100, 100)
@@ -292,7 +297,7 @@ class NODE_FORM_OT_Create_Merger_Node(Operator):
     bl_idname = "node_form.create_merger_node"
 
     def execute(self, context):
-        node_tree = find_node_form_tree()
+        node_tree = ns.find_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.merger_node')
             node.location = (100, 100)
@@ -306,7 +311,7 @@ class NODE_FORM_OT_Create_Deleter_Node(Operator):
     bl_idname = "node_form.create_deleter_node"
 
     def execute(self, context):
-        node_tree = find_node_form_tree()
+        node_tree = ns.find_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.deleter_node')
             node.location = (100, 100)
@@ -320,7 +325,7 @@ class NODE_FORM_OT_Create_Gridder_Node(Operator):
     bl_idname = "node_form.create_gridder_node"
 
     def execute(self, context):
-        node_tree = find_node_form_tree()
+        node_tree = ns.find_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.gridder_node')
             node.location = (100, 100)
@@ -334,7 +339,7 @@ class NODE_FORM_OT_Create_Transformer_Node(Operator):
     bl_idname = "node_form.create_transformer_node"
 
     def execute(self, context):
-        node_tree = find_node_form_tree()
+        node_tree = ns.find_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.transformer_node')
             node.location = (100, 100)
@@ -347,7 +352,7 @@ class NODE_FORM_OT_Create_Dictionary_Node(Operator):
     bl_idname = "node_form.create_dictionary_node"
 
     def execute(self, context):
-        node_tree = find_node_form_tree()
+        node_tree = ns.find_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.dictionary_node')
             node.location = (100, 100)
@@ -355,13 +360,13 @@ class NODE_FORM_OT_Create_Dictionary_Node(Operator):
         else:
             return{'ERROR'}
 
-class NODE_FORM_OT_Create_Dictionary_Node(Operator):
+class NODE_FORM_OT_Create_Library_Import_Node(Operator):
 
     bl_label = "Create Library Import Node"
     bl_idname = "node_form.create_library_import_node"
 
     def execute(self, context):
-        node_tree = find_node_form_tree()
+        node_tree = ns.find_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.library_import_node')
             node.location = (100, 100)
@@ -427,7 +432,7 @@ class NODE_FORM_OT_Create_Spherical_Preset(Operator):
     bl_idname = "node_form.create_spherical_preset"
 
     def execute(self, context):
-        node_tree = find_node_form_tree()
+        node_tree = ns.find_node_form_tree()
         if node_tree:
             
             gridder_node = node_tree.nodes.new('node_form.gridder_node')
@@ -485,6 +490,7 @@ registrars = [
     NODE_FORM_OT_Create_Transformer_Node,
     NODE_FORM_OT_Create_Spherical_Preset,
     NODE_FORM_OT_Create_Dictionary_Node,
+    NODE_FORM_OT_Create_Library_Import_Node,
     NODE_FORM_OT_Folder_Node_Add_Button,
     NODE_FORM_OT_Folder_Node_Delete_Button,
     NODE_FORM_OT_Folder_Node_Up_Button,
@@ -496,19 +502,11 @@ registrars = [
 def register_ng():
     for nodeclass in registrars:
         bpy.utils.register_class(nodeclass)
+    Scene.replacement_dictionary = CollectionProperty(type=NODE_FORM_PG_Dictionary_Property_Group)
+    Scene.replacement_dictionary_is_updated = BoolProperty(default=True)
 
 def unregister_ng():
     for nodeclass in registrars:
         bpy.utils.unregister_class(nodeclass)
-
-def find_node_form_tree():
-
-    node_tree = None
-    for tree in bpy.data.node_groups:
-        if tree.bl_idname == "node_form.node_form_tree":
-            return tree
-
-    if not node_tree:
-        self.report({'ERROR'}, "No Node Form Tree found")
-        return None
-    
+    del Scene.replacement_dictionary
+    del Scene.replacement_dictionary_is_updated

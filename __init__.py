@@ -25,7 +25,6 @@ spec_1 = importlib.util.spec_from_file_location(module_name_1, module_path_1)
 ng = importlib.util.module_from_spec(spec_1)
 spec_1.loader.exec_module(ng)
 
-
 @persistent
 def check_for_automator_object(dummy):
     if "Node Form" not in bpy.data.objects:
