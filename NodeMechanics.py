@@ -62,6 +62,8 @@ def transform(variables_vector, equations_vector, animation_run_time, frames_per
     transformationY = (equations_vector[1])
     transformationZ = (equations_vector[2])
 
+    print(transformationX)
+
     for _ in range(int(repeats)+1):
 
         for obj in bpy.context.selected_objects:

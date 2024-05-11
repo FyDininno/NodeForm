@@ -2,6 +2,7 @@ import os
 import importlib
 import math
 import bpy
+import re
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -242,7 +243,7 @@ def update_replacement_dictionary():
 
                 for i in range(len(var_folder)):
 
-                    temporary_dicationary[var_folder[i].variable]=var_folder[i].replacement
+                    temporary_dicationary[var_folder[i].variable] = var_folder[i].replacement
 
                 temporary_dicationary = substitute_keys_into_values(path_dictionary, temporary_dicationary)
 
@@ -309,19 +310,23 @@ def substitute_keys_into_strings(modifying_dictionary, strings):
     # List to store the modified strings
     modified_strings = []
 
+    # Create a regular expression that matches any of the keys in the dictionary
+    regex_pattern = re.compile("|".join(map(re.escape, modifying_dictionary.keys())))
+
     # Iterate over each string in the input list
     for s in strings:
-        # For each key-value pair in dic1, replace occurrences of the key in the string
-        for key, value in modifying_dictionary.items():
-            s = s.replace(key, value)
+        # Use re.sub to replace all matches at once
+        modified_s = regex_pattern.sub(lambda match: modifying_dictionary[match.group(0)], s)
+        
         # Add the modified string to the list
-        modified_strings.append(s)
+        modified_strings.append(modified_s)
 
     # Return the appropriate type based on the input
     if single_string_input:
         return modified_strings[0]
     else:
         return modified_strings
+
 
 def get_replacement_dictionary():
 

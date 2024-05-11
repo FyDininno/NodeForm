@@ -59,7 +59,7 @@ def check_for_automator_object(dummy):
         dictionary_node.location = (-100, 100)
         sin = dictionary_node.variable_folder.add()
         sin.variable = 'sin'
-        sin.replacement = 'math.cos'
+        sin.replacement = 'math.sin'
         cos = dictionary_node.variable_folder.add()
         cos.variable = 'cos'
         cos.replacement = 'math.cos'
