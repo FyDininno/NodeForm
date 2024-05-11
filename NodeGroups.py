@@ -202,7 +202,7 @@ class NODE_FORM_NT_Transformer_Node(Node):
         row.prop(self, "z_equation", text='')
         row = layout.row()
         row.label(text='Run Time')
-        row.label(text='Frame Density')
+        row.label(text='Frame Sparseness')
         row.label(text='Repetitions')
         row = layout.row()
         row.prop(self, "animation_run_time", text='')
