@@ -200,9 +200,8 @@ def execute_all_paths(start_node):
     def run_path(input_node):
         for node in list_output_nodes(input_node):
             return_value = execute_node(node) # An if statement node might break this loop
-            if return_value == 'BREAK':
-                break
-            run_path(node) # It will travel down 1111 then 1112 then 1121 ...
+            if return_value != 'BREAK':
+                run_path(node) # It will travel down 1111 then 1112 then 1121 ...
     run_path(start_node)
 
 def get_node_form_tree():
