@@ -1,5 +1,5 @@
 import os
-import importlib.util
+import importlib
 import math
 import bpy
 
@@ -121,7 +121,7 @@ def execute_node(node):
                                         node.y_offset,
                                         node.z_offset,
                                         node.cube_density,
-                                    ]))
+                                    ]), bpy.context.scene.library_collection)
                 
                 lengths_vector = evaluated_strings[0:3]
                 offset_vector = evaluated_strings[3:6]
@@ -148,7 +148,7 @@ def execute_node(node):
                                         node.animation_run_time,
                                         node.frames_per_calculation,
                                         node.repeats,
-                                    ]))
+                                    ]), bpy.context.scene.library_collection)
                 
                 variable_vector = variables[0:3]
                 equations_vector = variables[3:6]
@@ -169,30 +169,25 @@ def execute_node(node):
                 )
 
 def evaluate_strings(expressions, library_collection):
-    library_names = []
 
-    for i in range(len(library_collection)): #This converts the collection property into a list
-        library_names.append(library_collection[i].library_import)
-
-    return_list = []
-    # Create a dictionary to hold the allowed libraries
     allowed_libraries = {'__builtins__': None}
     
-    # Import and add libraries to the allowed_libraries dictionary
-    for name in library_names:
+    print('library collection length:' +str(len(library_collection)))
+
+    for library_element in library_collection:
         try:
-            module = importlib.import_module(name)
-            allowed_libraries[name] = module
+            print(library_element.library_name)
+            allowed_libraries[library_element.library_name] = importlib.import_module(library_element.library_name)
         except ImportError:
-            print(f'Failed to import {name}')
-    
-    # Evaluate each expression in the list
+            print('nothing imported')
+
+    return_list = []
     for item in expressions:
+        print(item)
         try:
-            result = eval(item, allowed_libraries)
-            return_list.append(result)
-        except Exception as e:
-            print(f'Error evaluating {item}: {str(e)}')
+            return_list.append(eval(item, allowed_libraries))
+        except TypeError:
+            print('Expression is not evaluable')
     
     return return_list
 
@@ -203,7 +198,7 @@ def execute_all_paths(start_node):
             run_path(node) # It will travel down 1111 then 1112 then 1121 ...
     run_path(start_node)
 
-def find_node_form_tree():
+def get_node_form_tree():
 
     node_tree = None
     for tree in bpy.data.node_groups:
@@ -217,7 +212,7 @@ def find_node_form_tree():
     
 def get_start_node():
 
-    node_tree = find_node_form_tree()
+    node_tree = get_node_form_tree()
 
     for node in node_tree.nodes:
         if hasattr(node, 'automation_type'):
@@ -228,6 +223,9 @@ def get_start_node():
             return None
 
 def update_replacement_dictionary():
+
+    bpy.context.scene.replacement_dictionary.clear()
+    bpy.context.scene.library_collection.clear()
 
     replacement_dictionary = get_replacement_dictionary()
 
@@ -255,7 +253,13 @@ def update_replacement_dictionary():
                 var_folder = node.variable_folder
 
                 for i in range(len(var_folder)):
-                    exec('import ' + var_folder[i].library_import)
+                    try:
+                        exec('import ' + var_folder[i].library_name)
+                        bpy.context.scene.library_collection.add().library_name = var_folder[i].library_name
+                    except SyntaxError:
+                        print('Syntax error during library import')
+                    except ImportError:
+                        print('Error importing library')
 
             elif node.automation_type != 'SRT':
                 print('Invalid Library or Dictionary Connection')

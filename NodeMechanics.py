@@ -14,7 +14,9 @@ def grid(lengths_vector, offset_vector, density):
     bmesh.ops.create_cube(bm, size=1.0)
     bmesh.ops.translate(bm, verts=list(bm.verts), vec=math_return_vector(1 / 2, 1 / 2, 1 / 2))
     math_flatten_bmesh(bm, lengths_vector)
-    xCuts, yCuts, zCuts = math.floor(density * lengths_vector[0]), math.floor(density * lengths_vector[1]), math.floor(density * lengths_vector[2])
+    xCuts = math.floor(density * abs(lengths_vector[0]))
+    yCuts = math.floor(density * abs(lengths_vector[1]))
+    zCuts = math.floor(density * abs(lengths_vector[2]))
     xScale = abs(1 / xCuts if xCuts != 0 else 0)
     yScale = abs(1 / yCuts if yCuts != 0 else 0)
     zScale = abs(1 / zCuts if zCuts != 0 else 0)
@@ -146,6 +148,7 @@ def transform(variables_vector, equations_vector, animation_run_time, frames_per
                         case 'KEEP':
                             pass
                         case 'HIDE':
+                            print('hidden')
                             original_object.hide_set(True)
                         case 'DELETE':
                             bpy.data.objects.remove(original_object, do_unlink=True)

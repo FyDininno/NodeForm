@@ -20,7 +20,7 @@ class NODE_FORM_PG_Dictionary_Property_Group(PropertyGroup):
     replacement: StringProperty()
 
 class NODE_FORM_PG_Library_Property_Group(PropertyGroup):
-    library_import: StringProperty()    
+    library_name: StringProperty()    
 
 class NODE_FORM_GNT_Node_Form_Tree(GeometryNodeTree):
 
@@ -32,6 +32,7 @@ class NODE_FORM_GNT_Node_Form_Tree(GeometryNodeTree):
     @classmethod
     def poll(cls, ntree):
         return hasattr(ntree, 'bl_idname') and ntree.bl_idname == "node_form.node_form_tree"
+
 
 class NODE_FORM_NT_Start_Node(Node):
     bl_idname = 'node_form.start_node'
@@ -149,12 +150,12 @@ class NODE_FORM_NT_Transformer_Node(Node):
 
     automation_type: StringProperty(default='TFM')
 
-    x_variable: StringProperty(default='α')
-    y_variable: StringProperty(default='β')
-    z_variable: StringProperty(default='γ')
-    x_equation: StringProperty(default='α = x')
-    y_equation: StringProperty(default='β = y')
-    z_equation: StringProperty(default='γ = z')
+    x_variable: StringProperty(default='X')
+    y_variable: StringProperty(default='Y')
+    z_variable: StringProperty(default='Z')
+    x_equation: StringProperty(default='X = x')
+    y_equation: StringProperty(default='Y = y')
+    z_equation: StringProperty(default='Z = z')
     
     animation_run_time: StringProperty(default='5')
     frames_per_calculation: StringProperty(default='2')
@@ -188,8 +189,8 @@ class NODE_FORM_NT_Transformer_Node(Node):
     
     def draw_buttons(self, context, layout):
         row = layout.row()
-        row.label(text='Variables {x,y,z}new')
-        row.label(text='Equations {x,y,z,t,T}')
+        row.label(text='Variables {x,y,z}(new)')
+        row.label(text='Equations {x,y,z,t,T}(original)')
         row = layout.row()
         row.prop(self, "x_variable", text='')
         row.prop(self, "x_equation", text='')
@@ -258,7 +259,7 @@ class NODE_FORM_NT_Library_Import_Node(Node):
         row.label(text="Library Name")
         for i, item in enumerate(self.variable_folder):
             row = layout.row()
-            row.prop(item, "library_import", text="")
+            row.prop(item, "library_name", text="")
             down_button = row.operator("node_form.folder_node_down_button", icon="TRIA_DOWN", text="")
             up_button = row.operator("node_form.folder_node_up_button", icon="TRIA_UP", text="")
             delete_button = row.operator("node_form.folder_node_delete_button", icon="X", text="")
@@ -277,6 +278,7 @@ class NODE_FORM_NT_Merger_Node(Node):
         self.outputs.new('NodeSocketColor', "")
         self.inputs.new('NodeSocketColor', "")
         self.inputs.new('NodeSocketColor', "")
+
 
 class NODE_FORM_OT_Start_Button(Operator):
     bl_idname = "node_form.start_button"
@@ -315,7 +317,7 @@ class NODE_FORM_OT_Create_Selector_Node(Operator):
     bl_idname = "node_form.create_selector_node"
 
     def execute(self, context):
-        node_tree = ns.find_node_form_tree()
+        node_tree = ns.get_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.selector_node')
             node.location = (100, 100)
@@ -329,7 +331,7 @@ class NODE_FORM_OT_Create_Deleter_Node(Operator):
     bl_idname = "node_form.create_deleter_node"
 
     def execute(self, context):
-        node_tree = ns.find_node_form_tree()
+        node_tree = ns.get_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.deleter_node')
             node.location = (100, 100)
@@ -343,7 +345,7 @@ class NODE_FORM_OT_Create_Gridder_Node(Operator):
     bl_idname = "node_form.create_gridder_node"
 
     def execute(self, context):
-        node_tree = ns.find_node_form_tree()
+        node_tree = ns.get_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.gridder_node')
             node.location = (100, 100)
@@ -357,7 +359,7 @@ class NODE_FORM_OT_Create_Transformer_Node(Operator):
     bl_idname = "node_form.create_transformer_node"
 
     def execute(self, context):
-        node_tree = ns.find_node_form_tree()
+        node_tree = ns.get_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.transformer_node')
             node.location = (100, 100)
@@ -370,7 +372,7 @@ class NODE_FORM_OT_Create_Dictionary_Node(Operator):
     bl_idname = "node_form.create_dictionary_node"
 
     def execute(self, context):
-        node_tree = ns.find_node_form_tree()
+        node_tree = ns.get_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.dictionary_node')
             node.location = (100, 100)
@@ -384,7 +386,7 @@ class NODE_FORM_OT_Create_Library_Import_Node(Operator):
     bl_idname = "node_form.create_library_import_node"
 
     def execute(self, context):
-        node_tree = ns.find_node_form_tree()
+        node_tree = ns.get_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.library_import_node')
             node.location = (100, 100)
@@ -398,13 +400,14 @@ class NODE_FORM_OT_Create_Merger_Node(Operator):
     bl_idname = "node_form.create_merger_node"
 
     def execute(self, context):
-        node_tree = ns.find_node_form_tree()
+        node_tree = ns.get_node_form_tree()
         if node_tree:
             node = node_tree.nodes.new('node_form.merger_node')
             node.location = (100, 100)
             return{'FINISHED'}
         else:
             return{'ERROR'}
+
 
 class NODE_FORM_OT_Folder_Node_Down_Button(Operator):
 
@@ -459,25 +462,128 @@ class NODE_FORM_OT_Folder_Node_Add_Button(Operator):
         node.variable_folder.add()
         return {'FINISHED'}
 
+
 class NODE_FORM_OT_Create_Spherical_Preset(Operator):
     bl_label = "Create Spherical Parameterization"
     bl_idname = "node_form.create_spherical_preset"
 
     def execute(self, context):
-        node_tree = ns.find_node_form_tree()
+        node_tree = ns.get_node_form_tree()
         if node_tree:
+            start_node = ns.get_start_node()
+
+            dictionary_node = node_tree.nodes.new('node_form.dictionary_node')
+            dictionary_node.location = (-100, 100)
+            radius = dictionary_node.variable_folder.add()
+            radius.variable = 'r'
+            radius.replacement = 'x'
+            phi = dictionary_node.variable_folder.add()
+            phi.variable = 'φ'
+            phi.replacement = 'y'
+            theta = dictionary_node.variable_folder.add()
+            theta.variable = 'θ'
+            theta.replacement = 'z'
             
             gridder_node = node_tree.nodes.new('node_form.gridder_node')
             gridder_node.location = (100, 100)
+            gridder_node.x_length = '1'
+            gridder_node.y_length = '2*pi'
+            gridder_node.z_length = 'pi'
 
             transformer_node = node_tree.nodes.new('node_form.transformer_node')
             transformer_node.location = (300, 100)
+            transformer_node.x_equation = "X = r*cos(φ)*sin(θ)"
+            transformer_node.y_equation = "Y = r*sin(φ)*sin(θ)"
+            transformer_node.z_equation = "Z = r*cos(θ)"
 
-            link = node_tree.links.new(gridder_node.outputs[0], transformer_node.inputs[0])
+            node_tree.links.new(gridder_node.outputs[0], transformer_node.inputs[0])
+            node_tree.links.new(dictionary_node.outputs[0], start_node.inputs[0])
 
             return{'FINISHED'}
         else:
             return{'ERROR'}
+
+class NODE_FORM_OT_Create_Smooth_Spherical_Preset(Operator):
+    bl_label = "Create Smooth Spherical Parameterization"
+    bl_idname = "node_form.create_smooth_spherical_preset"
+
+    def execute(self, context):
+        node_tree = ns.get_node_form_tree()
+        if node_tree:
+            start_node = ns.get_start_node()
+            
+            dictionary_node = node_tree.nodes.new('node_form.dictionary_node')
+            dictionary_node.location = (-100, 100)
+            radius = dictionary_node.variable_folder.add()
+            radius.variable = 'r'
+            radius.replacement = 'x'
+            phi = dictionary_node.variable_folder.add()
+            phi.variable = 'φ'
+            phi.replacement = 'y'
+            theta = dictionary_node.variable_folder.add()
+            theta.variable = 'θ'
+            theta.replacement = 'z'
+            
+            gridder_node = node_tree.nodes.new('node_form.gridder_node')
+            gridder_node.location = (100, 100)
+            gridder_node.x_length = '1'
+            gridder_node.y_length = '2*pi'
+            gridder_node.y_offset = '-pi'
+            gridder_node.z_length = 'pi'
+            gridder_node.z_offset = '-pi/2'
+
+            transformer_node = node_tree.nodes.new('node_form.transformer_node')
+            transformer_node.location = (300, 100)
+            transformer_node.x_equation = "X = r*cos(φ)*cos(θ)"
+            transformer_node.y_equation = "Y = r*sin(φ)*cos(θ)"
+            transformer_node.z_equation = "Z = r*sin(θ)"
+            transformer_node.transformation_type = 'SMOOTH'
+
+            node_tree.links.new(gridder_node.outputs[0], transformer_node.inputs[0])
+            node_tree.links.new(dictionary_node.outputs[0], start_node.inputs[0])
+
+            return{'FINISHED'}
+        else:
+            return{'ERROR'}
+
+class NODE_FORM_OT_Create_Cylindrical_Preset(Operator):
+    bl_label = "Create Cylindrical Parameterization"
+    bl_idname = "node_form.create_cylindrical_preset"
+
+    def execute(self, context):
+        node_tree = ns.get_node_form_tree()
+        if node_tree:
+            start_node = ns.get_start_node()
+            
+            dictionary_node = node_tree.nodes.new('node_form.dictionary_node')
+            dictionary_node.location = (-100, 100)
+            radius = dictionary_node.variable_folder.add()
+            radius.variable = 'r'
+            radius.replacement = 'x'
+            theta = dictionary_node.variable_folder.add()
+            theta.variable = 'θ'
+            theta.replacement = 'y'
+            
+            gridder_node = node_tree.nodes.new('node_form.gridder_node')
+            gridder_node.location = (100, 100)
+            gridder_node.x_length = '1'
+            gridder_node.y_length = 'pi'
+            gridder_node.y_offset = '-pi/2'
+            gridder_node.z_length = '1'
+
+            transformer_node = node_tree.nodes.new('node_form.transformer_node')
+            transformer_node.location = (300, 100)
+            transformer_node.x_equation = "X = r*cos(θ)"
+            transformer_node.y_equation = "Y = r*sin(θ)"
+            transformer_node.z_equation = "Z = z"
+
+            node_tree.links.new(gridder_node.outputs[0], transformer_node.inputs[0])
+            node_tree.links.new(dictionary_node.outputs[0], start_node.inputs[0])
+
+            return{'FINISHED'}
+        else:
+            return{'ERROR'}
+
 
 class NODE_FORM_MT_Start_Node_Menu(Menu):
 
@@ -501,12 +607,16 @@ class NODE_FORM_MT_Start_Node_Preset_Menu(Menu):
     def draw(self, context):
         layout = self.layout
         layout.operator('node_form.create_spherical_preset', text="Create Spherical Parameterization")
+        layout.operator('node_form.create_smooth_spherical_preset', text="Create Smooth Spherical Parameterization")
+        layout.operator('node_form.create_cylindrical_preset', text="Create Cylindrical Parameterization")
+
 
 temp_variables = []
 
 def delete_temporary_variables():
     for pg in temp_variables:
         del pg
+
 
 registrars = [
     NODE_FORM_PG_Dictionary_Property_Group,
@@ -526,9 +636,11 @@ registrars = [
     NODE_FORM_OT_Create_Deleter_Node, 
     NODE_FORM_OT_Create_Gridder_Node,
     NODE_FORM_OT_Create_Transformer_Node,
-    NODE_FORM_OT_Create_Spherical_Preset,
     NODE_FORM_OT_Create_Dictionary_Node,
     NODE_FORM_OT_Create_Library_Import_Node,
+    NODE_FORM_OT_Create_Spherical_Preset,
+    NODE_FORM_OT_Create_Smooth_Spherical_Preset,
+    NODE_FORM_OT_Create_Cylindrical_Preset,
     NODE_FORM_OT_Folder_Node_Add_Button,
     NODE_FORM_OT_Folder_Node_Delete_Button,
     NODE_FORM_OT_Folder_Node_Up_Button,
@@ -542,13 +654,13 @@ def register_ng():
         bpy.utils.register_class(nodeclass)
     Scene.replacement_dictionary = CollectionProperty(type=NODE_FORM_PG_Dictionary_Property_Group)
     Scene.replacement_dictionary_is_updated = BoolProperty(default=True) #This is the parent object. context.scene is the instance running in the blender folder
-    Scene.imported_libraries = CollectionProperty(type=NODE_FORM_PG_Library_Property_Group)
+    Scene.library_collection = CollectionProperty(type=NODE_FORM_PG_Library_Property_Group)
 
 def unregister_ng():
     for nodeclass in registrars:
         bpy.utils.unregister_class(nodeclass)
     del Scene.replacement_dictionary
     del Scene.replacement_dictionary_is_updated
-    del Scene.imported_libraries
+    del Scene.library_collection
 
     delete_temporary_variables()

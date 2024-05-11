@@ -49,6 +49,30 @@ def check_for_automator_object(dummy):
         start_node = node_tree.nodes.new('node_form.start_node')
         start_node.location = (100, 100)
 
+        # Add the default dictionaries to the node tree
+        library_import_node = node_tree.nodes.new('node_form.library_import_node')
+        math_lib = library_import_node.variable_folder.add()
+        math_lib.library_name = 'math'
+        library_import_node.location = (-300, 100)
+
+        dictionary_node = node_tree.nodes.new('node_form.dictionary_node')
+        dictionary_node.location = (-100, 100)
+        sin = dictionary_node.variable_folder.add()
+        sin.variable = 'sin'
+        sin.replacement = 'math.cos'
+        cos = dictionary_node.variable_folder.add()
+        cos.variable = 'cos'
+        cos.replacement = 'math.cos'
+        exp = dictionary_node.variable_folder.add()
+        exp.variable = '[e]'
+        exp.replacement = 'math.exp'
+        pi = dictionary_node.variable_folder.add()
+        pi.variable = 'pi'
+        pi.replacement = 'math.pi'
+
+        node_tree.links.new(library_import_node.outputs[0], dictionary_node.inputs[0])
+        node_tree.links.new(dictionary_node.outputs[0], start_node.inputs[0])
+
         print("Node Form object and custom node created.")
     else:
         print("Node Form object already exists.")
