@@ -94,6 +94,10 @@ def execute_node(node):
     if hasattr(node, 'automation_type'):
         
         match getattr(node, 'automation_type'):
+            
+            case 'JNC':
+                if not node.allowed_to_pass:
+                    return 'BREAK'
 
             case 'SLT':
                 match node.selection_mode:
@@ -195,7 +199,9 @@ def evaluate_strings(expressions, library_collection):
 def execute_all_paths(start_node):
     def run_path(input_node):
         for node in list_output_nodes(input_node):
-            execute_node(node) # An if statement node might break this loop
+            return_value = execute_node(node) # An if statement node might break this loop
+            if return_value == 'BREAK':
+                break
             run_path(node) # It will travel down 1111 then 1112 then 1121 ...
     run_path(start_node)
 
@@ -233,6 +239,7 @@ def update_replacement_dictionary():
     for path in get_back_paths(get_start_node()):
 
         path_dictionary = {}
+        path_libraries = []
 
         for node in path:
 
@@ -253,17 +260,26 @@ def update_replacement_dictionary():
 
                 var_folder = node.variable_folder
 
-                for i in range(len(var_folder)):
-                    try:
-                        exec('import ' + var_folder[i].library_name)
-                        bpy.context.scene.library_collection.add().library_name = var_folder[i].library_name
-                    except SyntaxError:
-                        print('Syntax error during library import')
-                    except ImportError:
-                        print('Error importing library')
+                for library in var_folder:
+                    path_libraries.append(library.library_name)
+                    
+            elif node.automation_type == 'JNC':
+                if not node.allowed_to_pass:
+                    path_dictionary.clear()
+                    path_libraries.clear()
+                    break
 
             elif node.automation_type != 'SRT':
                 print('Invalid Library or Dictionary Connection')
+
+        for library_name in path_libraries:
+            try:
+                exec('import ' + library_name)
+                bpy.context.scene.library_collection.add().library_name = library_name
+            except SyntaxError:
+                print('Syntax error during library import')
+            except ImportError:
+                print('Error importing library')
 
         replacement_dictionary = append_unique_keys(replacement_dictionary, path_dictionary)
 
@@ -326,7 +342,6 @@ def substitute_keys_into_strings(modifying_dictionary, strings):
         return modified_strings[0]
     else:
         return modified_strings
-
 
 def get_replacement_dictionary():
 

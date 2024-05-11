@@ -267,19 +267,34 @@ class NODE_FORM_NT_Library_Import_Node(Node):
             up_button.index = i
             delete_button.index = i
 
-class NODE_FORM_NT_Merger_Node(Node):
+class NODE_FORM_NT_Junction_Node(Node):
 
-    bl_idname = 'node_form.merger_node'
-    bl_label = "Merger Node"
+    bl_idname = 'node_form.junction_node'
+    bl_label = "Junction Node"
 
-    automation_type: StringProperty(default='MRG')
+    automation_type: StringProperty(default='JNC')
+    number_of_inputs: IntProperty(default=1, 
+                                  update=lambda self, context: self.update_inputs(context)
+                                  )
+    allowed_to_pass: BoolProperty(default=True)
 
     def init(self, context):
         self.outputs.new('NodeSocketColor', "")
-        self.inputs.new('NodeSocketColor', "")
-        self.inputs.new('NodeSocketColor', "")
+        for _ in range (self.number_of_inputs):
+            self.inputs.new('NodeSocketColor', "")
 
+    def draw_buttons(self, context, layout):
+        layout.prop(self, 'number_of_inputs', text='Number of Inputs')
+        layout.prop(self, 'allowed_to_pass', text='Continue')
+    
+    def update_inputs(self, context):
+        # First, clear existing inputs
+        self.inputs.clear()
 
+        # Then, add new inputs based on the updated number of inputs
+        for _ in range(self.number_of_inputs):
+            self.inputs.new('NodeSocketColor', "")
+            
 class NODE_FORM_OT_Start_Button(Operator):
     bl_idname = "node_form.start_button"
     bl_label = "Start Button"
@@ -394,15 +409,15 @@ class NODE_FORM_OT_Create_Library_Import_Node(Operator):
         else:
             return{'ERROR'}
 
-class NODE_FORM_OT_Create_Merger_Node(Operator):
+class NODE_FORM_OT_Create_Junction_Node(Operator):
     
     bl_label = "Create Merger Node"
-    bl_idname = "node_form.create_merger_node"
+    bl_idname = "node_form.create_junction_node"
 
     def execute(self, context):
         node_tree = ns.get_node_form_tree()
         if node_tree:
-            node = node_tree.nodes.new('node_form.merger_node')
+            node = node_tree.nodes.new('node_form.junction_node')
             node.location = (100, 100)
             return{'FINISHED'}
         else:
@@ -598,7 +613,7 @@ class NODE_FORM_MT_Start_Node_Menu(Menu):
         layout.operator('node_form.create_transformer_node', text="Create Transformer Node")
         layout.operator('node_form.create_dictionary_node', text="Create Dictionary Node")
         layout.operator('node_form.create_library_import_node', text="Create Library Import Node")
-        layout.operator('node_form.create_merger_node', text="Create Merger Node")
+        layout.operator('node_form.create_junction_node', text="Create Junction Node")
 
 class NODE_FORM_MT_Start_Node_Preset_Menu(Menu):
     bl_label = "Preset Menu"
@@ -623,7 +638,7 @@ registrars = [
     NODE_FORM_PG_Library_Property_Group,
     NODE_FORM_GNT_Node_Form_Tree, 
     NODE_FORM_NT_Start_Node, 
-    NODE_FORM_NT_Merger_Node,
+    NODE_FORM_NT_Junction_Node,
     NODE_FORM_NT_Selector_Node, 
     NODE_FORM_NT_Deleter_Node, 
     NODE_FORM_NT_Gridder_Node,
@@ -632,7 +647,7 @@ registrars = [
     NODE_FORM_NT_Library_Import_Node,
     NODE_FORM_OT_Start_Button, 
     NODE_FORM_OT_Create_Selector_Node, 
-    NODE_FORM_OT_Create_Merger_Node,
+    NODE_FORM_OT_Create_Junction_Node,
     NODE_FORM_OT_Create_Deleter_Node, 
     NODE_FORM_OT_Create_Gridder_Node,
     NODE_FORM_OT_Create_Transformer_Node,
