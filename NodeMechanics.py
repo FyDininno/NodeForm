@@ -46,11 +46,18 @@ def grid(lengths_vector, offset_vector, density):
     for obj in current_selection:
         obj.select_set(True)
 
-def hollow_grid(dimension, offset, density):
+def hollow_grid(offset, dimension, density):
+    dimension_vector = math_return_vector(dimension[0], dimension[1], dimension[2])
+    offset_vector = math_return_vector(offset[0], offset[1], offset[2])
     obj = bpy.context.active_object
     bm = bmesh_selection_to_bmesh(obj)
-    nudgeVector = math_scale_vector(math_scale_vector(dimension, 1 / (1 + density * (dimension[0] + dimension[1] + dimension[2]))), 1 / 2)
-    bmesh_select_geometry(bm, offset + nudgeVector, dimension + offset - nudgeVector)
+    
+    nudgeVector = math_scale_vector(dimension, 0.5 / (1 + density * (dimension[0] + dimension[1] + dimension[2])))
+    print(nudgeVector)
+    print(dimension_vector)
+    print(offset_vector)
+
+    bmesh_select_geometry(bm, offset_vector + nudgeVector, dimension_vector + offset_vector - nudgeVector)
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.select], context='FACES')
     bm.to_mesh(obj.data)
     bm.free()
@@ -215,6 +222,7 @@ def bpy_join_all(objects):
     bpy.ops.object.mode_set(mode='OBJECT')
 
 def bmesh_select_geometry(bm, lowerVector, upperVector): # select faces within difference of coordinates between two vectors
+
     for f in bm.faces:
         f.select = False
     for f in bm.faces:
@@ -240,8 +248,8 @@ def bmesh_embody_mesh(bm):
 def math_return_vector(x, y, z):
     return mathutils.Vector((x, y, z))
 
-def math_scale_vector(vector, scale):
-    return vector(vector[0] * scale, vector[1] * scale, vector[2] * scale)
+def math_scale_vector(input_vector, scale):
+    return math_return_vector(input_vector[0] * scale, input_vector[1] * scale, input_vector[2] * scale)
 
 def math_flatten_bmesh(bm, scaleVector):
     for v in bm.verts:
