@@ -2,8 +2,14 @@ import bpy
 import bmesh
 import mathutils
 import math
+import importlib
 
-def grid(lengths_vector, offset_vector, density):
+# is_vector_field : destroy all but vertices, 
+# add three evaluations, 
+# add vectors at those points
+# make a normalized check box 
+# (and remove hollow)
+def grid(lengths_vector, offset_vector, density_vector): 
     # Store current selection
     current_selection = [obj for obj in bpy.context.selected_objects]
 
@@ -14,9 +20,9 @@ def grid(lengths_vector, offset_vector, density):
     bmesh.ops.create_cube(bm, size=1.0)
     bmesh.ops.translate(bm, verts=list(bm.verts), vec=math_return_vector(1 / 2, 1 / 2, 1 / 2))
     math_flatten_bmesh(bm, lengths_vector)
-    xCuts = math.floor(density * abs(lengths_vector[0]))
-    yCuts = math.floor(density * abs(lengths_vector[1]))
-    zCuts = math.floor(density * abs(lengths_vector[2]))
+    xCuts = math.floor(density_vector[0] * abs(lengths_vector[0]))
+    yCuts = math.floor(density_vector[1] * abs(lengths_vector[1]))
+    zCuts = math.floor(density_vector[2] * abs(lengths_vector[2]))
     xScale = abs(1 / xCuts if xCuts != 0 else 0)
     yScale = abs(1 / yCuts if yCuts != 0 else 0)
     zScale = abs(1 / zCuts if zCuts != 0 else 0)
@@ -46,30 +52,23 @@ def grid(lengths_vector, offset_vector, density):
     for obj in current_selection:
         obj.select_set(True)
 
-def hollow_grid(offset, dimension, density):
+def hollow_grid(offset, dimension, density_vector):
     dimension_vector = math_return_vector(dimension[0], dimension[1], dimension[2])
     offset_vector = math_return_vector(offset[0], offset[1], offset[2])
     obj = bpy.context.active_object
     bm = bmesh_selection_to_bmesh(obj)
-    
-    nudgeVector = math_scale_vector(dimension, 0.5 / (1 + density * (dimension[0] + dimension[1] + dimension[2])))
-    print(nudgeVector)
-    print(dimension_vector)
-    print(offset_vector)
+
+    # Summing the densities multiplied by the dimensions gauruntees that it is smaller than one cube, multiplying it by 1/2 makes sure that it is before the center of the inside face
+    nudgeVector = math_scale_vector(dimension, 0.5 / (1 + (density_vector[0] + density_vector[1] + density_vector[2]) * (dimension[0] + dimension[1] + dimension[2])))
 
     bmesh_select_geometry(bm, offset_vector + nudgeVector, dimension_vector + offset_vector - nudgeVector)
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.select], context='FACES')
     bm.to_mesh(obj.data)
     bm.free()
 
-# Add two more for loops, one for repeat iterations and the other one to apply the transform to each selected element
-def transform(variables_vector, equations_vector, animation_run_time, frames_per_calculation, repeats, transformation_type, keep_option):
-    print('starting transformation')
-    transformationX = (equations_vector[0]) #The expressionreplacement will now happen when the arguments are being passed in 
-    transformationY = (equations_vector[1])
-    transformationZ = (equations_vector[2])
+def transform(equations_vector, animation_run_time, frames_per_calculation, repeats, transformation_type, keep_option):
 
-    print(transformationX)
+    print(equations_vector)
 
     for _ in range(int(repeats)+1):
 
@@ -133,10 +132,9 @@ def transform(variables_vector, equations_vector, animation_run_time, frames_per
                             x, y, z = x0 * (1 - remainder), y0 * (1 - remainder), z0 * (1 - remainder)
                             t = ((frameIndex) * frameDivisor) / (framesPerSecond)
                             T = ((upperRange) * frameDivisor) / (framesPerSecond)
-                            exec(transformationX); exec(transformationY); exec(transformationZ)
-                            activeObj.data.shape_keys.key_blocks[keyString].data[i].co.x = locals()[variables_vector[0]] + xr
-                            activeObj.data.shape_keys.key_blocks[keyString].data[i].co.y = locals()[variables_vector[1]] + yr
-                            activeObj.data.shape_keys.key_blocks[keyString].data[i].co.z = locals()[variables_vector[2]] + zr
+                            activeObj.data.shape_keys.key_blocks[keyString].data[i].co.x = safe_evaluation(equations_vector[0],x,y,z,t,T) + xr
+                            activeObj.data.shape_keys.key_blocks[keyString].data[i].co.y = safe_evaluation(equations_vector[1],x,y,z,t,T) + yr
+                            activeObj.data.shape_keys.key_blocks[keyString].data[i].co.z = safe_evaluation(equations_vector[2],x,y,z,t,T) + zr
 
                         if ((frameIndex == 0) and (startframe != 0)):
                             activeObj.data.shape_keys.key_blocks["Key " + str(startframe)].value = 0.0
@@ -157,7 +155,6 @@ def transform(variables_vector, equations_vector, animation_run_time, frames_per
                         case 'KEEP':
                             pass
                         case 'HIDE':
-                            print('hidden')
                             original_object.hide_set(True)
                         case 'DELETE':
                             bpy.data.objects.remove(original_object, do_unlink=True)
@@ -308,3 +305,46 @@ def has_shape_key(ob, name):
         ob.data.shape_keys and
         ob.data.shape_keys.key_blocks.get(name)
     )
+
+def safe_evaluation(input, trfx=None, trfy=None, trfz=None, trft=None, trfT=None):
+
+    expressions = [input] if isinstance(input, str) else input
+
+    library_collection = bpy.context.scene.library_collection
+    filepath_collection = bpy.context.scene.filepath_collection
+
+    allowed_libraries = {'__builtins__': None, 'x':trfx,'y':trfy,'z':trfz,'t':trft,'T':trfT}
+    
+    for library_element in library_collection:
+        try:
+            allowed_libraries[library_element.library_name] = importlib.import_module(library_element.library_name)
+        except ImportError:
+            print('no library imported')
+    
+    for filepath_element in filepath_collection:
+
+        file_path = filepath_element.filepath_name
+        # Extract the module name from the file path
+        module_name = file_path.split('/')[-1].replace('.py', '')
+        # Create a module spec
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        # Create a new module based on the spec
+        module = importlib.util.module_from_spec(spec)
+
+        try:
+            # Execute the module in its own namespace
+            spec.loader.exec_module(module)
+            # Add the loaded and executed module to your dictionary
+            allowed_libraries[filepath_element.module_name] = module
+        except Exception as e:  # Catch broader exceptions if the loading or executing fails
+            print(f'Failed to import {module_name}: {str(e)}')
+
+    return_list = []
+    for item in expressions:
+        try:
+            return_list.append(eval(item, allowed_libraries))
+            monitor = (eval(item, allowed_libraries))
+        except TypeError:
+            print('Expression is not evaluable')
+    
+    return return_list[0] if isinstance(input, str) else return_list

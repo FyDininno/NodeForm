@@ -67,8 +67,11 @@ def check_for_automator_object(dummy):
         exp.variable = '[e]'
         exp.replacement = 'math.exp'
         pi = dictionary_node.variable_folder.add()
-        pi.variable = 'pi'
+        pi.variable = '[pi]'
         pi.replacement = 'math.pi'
+        pow = dictionary_node.variable_folder.add()
+        pow.variable = '^'
+        pow.replacement = '**'
 
         node_tree.links.new(library_import_node.outputs[0], dictionary_node.inputs[0])
         node_tree.links.new(dictionary_node.outputs[0], start_node.inputs[0])
