@@ -343,7 +343,7 @@ def safe_evaluation(input, trfx=None, trfy=None, trfz=None, trft=None, trfT=None
     for item in expressions:
         try:
             return_list.append(eval(item, allowed_libraries))
-            monitor = (eval(item, allowed_libraries))
+            # print(eval(item, allowed_libraries))
         except TypeError:
             print('Expression is not evaluable')
     
