@@ -608,6 +608,7 @@ class NODE_FORM_OT_Create_Smooth_Spherical_Preset(Operator):
             transform_node.y_equation = "r*sin(φ)*cos(θ)"
             transform_node.z_equation = "r*sin(θ)"
             transform_node.transformation_type = 'SMOOTH'
+            transform_node.animation_runtime = '2'
 
             node_tree.links.new(grid_create_node.outputs[0], transform_node.inputs[0])
             node_tree.links.new(dictionary_node.outputs[0], start_node.inputs[0])
