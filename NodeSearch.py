@@ -12,6 +12,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# This add-on is built upon Blender's open-source codebase. Special thanks to
+# the [Blender Foundation](https://www.blender.org/).
 
 import os
 import importlib
