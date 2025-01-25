@@ -2,7 +2,7 @@
 
 Node Form is an addon for Blender that allows you to turn a mathematical transformation into an animation. It can also be used as a program to simply transform geometries for other applications which are not animation related. It works through a node-based UI which resides in the 'Geometry Nodes' panel of an invisible scene object named 'Node Form'.
 
-![Sphere Parameterization Demo](https://i.imgur.com/RZhXzVR.gif)
+![Imgur](https://i.imgur.com/JzsXml7.gifv)
 
 ## Installation
 
