@@ -8,7 +8,7 @@ To install this addon, simply download this repository as a .zip file by pressin
 
 ## Documentation
 
-A tutorial on how to use Node Form can be found on my website https://fydininno.github.io/ObsidianOnline/documentation/Node-Form
+A tutorial on how to use Node Form can be found here: https://fydininno.github.io/ObsidianOnline/documentation/Node-Form
 
 ## Acknowledgements
 
