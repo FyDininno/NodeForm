@@ -573,7 +573,7 @@ class NODE_FORM_OT_Create_Spherical_Preset(Operator):
             theta.replacement = 'z'
             
             grid_create_node = node_tree.nodes.new('node_form.grid_create_node')
-            grid_create_node.location = (300, 100)
+            grid_create_node.location = (400, 100)
             grid_create_node.x_length = '1'
             grid_create_node.y_length = '2*[pi]'
             grid_create_node.z_length = '[pi]'
