@@ -331,7 +331,7 @@ def safe_evaluation(input, trfx=None, trfy=None, trfz=None, trft=None, trfT=None
     library_collection = bpy.context.scene.library_collection
     filepath_collection = bpy.context.scene.filepath_collection
 
-    allowed_libraries = {'__builtins__': None, 'x':trfx,'y':trfy,'z':trfz,'t':trft,'T':trfT}
+    allowed_libraries = {'__builtins__': __builtins__, 'x':trfx,'y':trfy,'z':trfz,'t':trft,'T':trfT}
     
     for library_element in library_collection:
         try:
