@@ -180,9 +180,9 @@ class NODE_FORM_NT_Transform_Node(Node):
 
     name: StringProperty()
 
-    x_equation: StringProperty(default='x')
-    y_equation: StringProperty(default='y')
-    z_equation: StringProperty(default='z')
+    x_equation: StringProperty(default='[x]')
+    y_equation: StringProperty(default='[y]')
+    z_equation: StringProperty(default='[z]')
     
     animation_run_time: StringProperty(default='0')
     frames_per_calculation: StringProperty(default='2')
@@ -563,14 +563,14 @@ class NODE_FORM_OT_Create_Spherical_Preset(Operator):
             dictionary_node = node_tree.nodes.new('node_form.dictionary_node')
             dictionary_node.location = (-100, 100)
             radius = dictionary_node.variable_folder.add()
-            radius.variable = 'r'
-            radius.replacement = 'x'
+            radius.variable = '[r]'
+            radius.replacement = '[x]'
             phi = dictionary_node.variable_folder.add()
             phi.variable = 'φ'
-            phi.replacement = 'y'
+            phi.replacement = '[y]'
             theta = dictionary_node.variable_folder.add()
             theta.variable = 'θ'
-            theta.replacement = 'z'
+            theta.replacement = '[z]'
             
             grid_create_node = node_tree.nodes.new('node_form.grid_create_node')
             grid_create_node.location = (400, 100)
@@ -580,9 +580,9 @@ class NODE_FORM_OT_Create_Spherical_Preset(Operator):
 
             transform_node = node_tree.nodes.new('node_form.transform_node')
             transform_node.location = (300, 100)
-            transform_node.x_equation = "r*cos(φ)*sin(θ)"
-            transform_node.y_equation = "r*sin(φ)*sin(θ)"
-            transform_node.z_equation = "r*cos(θ)"
+            transform_node.x_equation = "[r]*cos(φ)*sin(θ)"
+            transform_node.y_equation = "[r]*sin(φ)*sin(θ)"
+            transform_node.z_equation = "[r]*cos(θ)"
 
             node_tree.links.new(grid_create_node.outputs[0], transform_node.inputs[0])
             node_tree.links.new(dictionary_node.outputs[0], start_node.inputs[0])
@@ -603,14 +603,14 @@ class NODE_FORM_OT_Create_Smooth_Spherical_Preset(Operator):
             dictionary_node = node_tree.nodes.new('node_form.dictionary_node')
             dictionary_node.location = (-100, 100)
             radius = dictionary_node.variable_folder.add()
-            radius.variable = 'r'
-            radius.replacement = 'x'
+            radius.variable = '[r]'
+            radius.replacement = '[x]'
             phi = dictionary_node.variable_folder.add()
             phi.variable = 'φ'
-            phi.replacement = 'y'
+            phi.replacement = '[y]'
             theta = dictionary_node.variable_folder.add()
             theta.variable = 'θ'
-            theta.replacement = 'z'
+            theta.replacement = '[z]'
             
             grid_create_node = node_tree.nodes.new('node_form.grid_create_node')
             grid_create_node.location = (300, 100)
@@ -622,9 +622,9 @@ class NODE_FORM_OT_Create_Smooth_Spherical_Preset(Operator):
 
             transform_node = node_tree.nodes.new('node_form.transform_node')
             transform_node.location = (300, 100)
-            transform_node.x_equation = "r*cos(φ)*cos(θ)"
-            transform_node.y_equation = "r*sin(φ)*cos(θ)"
-            transform_node.z_equation = "r*sin(θ)"
+            transform_node.x_equation = "[r]*cos(φ)*cos(θ)"
+            transform_node.y_equation = "[r]*sin(φ)*cos(θ)"
+            transform_node.z_equation = "[r]*sin(θ)"
             transform_node.transformation_type = 'SMOOTH'
             transform_node.animation_runtime = '2'
 
@@ -647,11 +647,11 @@ class NODE_FORM_OT_Create_Cylindrical_Preset(Operator):
             dictionary_node = node_tree.nodes.new('node_form.dictionary_node')
             dictionary_node.location = (-100, 100)
             radius = dictionary_node.variable_folder.add()
-            radius.variable = 'r'
-            radius.replacement = 'x'
+            radius.variable = '[r]'
+            radius.replacement = '[x]'
             theta = dictionary_node.variable_folder.add()
             theta.variable = 'θ'
-            theta.replacement = 'y'
+            theta.replacement = '[y]'
             
             grid_create_node = node_tree.nodes.new('node_form.grid_create_node')
             grid_create_node.location = (300, 100)
@@ -662,9 +662,9 @@ class NODE_FORM_OT_Create_Cylindrical_Preset(Operator):
 
             transform_node = node_tree.nodes.new('node_form.transform_node')
             transform_node.location = (300, 100)
-            transform_node.x_equation = "r*cos(θ)"
-            transform_node.y_equation = "r*sin(θ)"
-            transform_node.z_equation = "z"
+            transform_node.x_equation = "[r]*cos(θ)"
+            transform_node.y_equation = "[r]*sin(θ)"
+            transform_node.z_equation = "[z]"
 
             node_tree.links.new(grid_create_node.outputs[0], transform_node.inputs[0])
             node_tree.links.new(dictionary_node.outputs[0], start_node.inputs[0])
