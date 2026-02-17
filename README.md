@@ -6,7 +6,7 @@ Node Form is an addon for Blender that allows you to turn a mathematical transfo
 
 ## Installation
 
-To install this addon, simply download this repository as a .zip file by pressing the green 'Code' button on the top right-hand side of this page and selecting the 'Download as ZIP' option. Next, open Blender, go to Edit > Preferences > Addons, and click "Install". Then, choose the .zip file you just downloaded. This add-on works with Blender version 3.6.
+To install this addon, simply download this repository as a .zip file by pressing the green 'Code' button on the top right-hand side of this page and selecting the 'Download as ZIP' option. Next, open Blender, go to Edit > Preferences > Addons, and click "Install". Then, choose the .zip file you just downloaded. This add-on works with Blender version 3.6: https://download.blender.org/release/Blender3.6/
 
 ## Documentation
 
